@@ -95,6 +95,24 @@ alias agy-token='python3 /path/to/boros-token/agy_sender.py'
 
 ---
 
+## AI Agent Setup Prompt
+
+If you are using an AI coding agent CLI in this workspace and want it to wire itself up to this dashboard automatically, you can copy-paste the following prompt and send it to your agent:
+
+```text
+Please integrate this agent CLI workspace with the Boros Token monitoring dashboard. 
+To do this:
+1. Locate the configuration files or wrapper commands for this agent CLI (such as custom hooks, post-execution scripts, or terminal aliases).
+2. Configure the CLI to pipe its JSON metadata/token telemetry output into the Boros Token sender script:
+   - For Agy: `/absolute/path/to/boros-token/agy_sender.py`
+   - For Codex: `/absolute/path/to/boros-token/codex_sender.py`
+   - For OpenCode: `/absolute/path/to/boros-token/opencode_sender.py`
+   (Be sure to replace `/absolute/path/to/boros-token` with the actual path where this project is located on my machine).
+3. If no built-in piping is available, wrap the terminal launch command for this agent so it intercepts stdout and routes it through the sender script.
+```
+
+---
+
 ## Payload Format
 
 The dashboard accepts JSON payloads sent via POST to `/api/metadata` matching this schema:
