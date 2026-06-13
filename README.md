@@ -6,37 +6,9 @@
 
 **Boros Token** is a lightweight, real-time local dashboard designed to monitor token usage (input, output, cached tokens) across multiple AI CLI agents in one unified interface.
 
+![Boros Token Dashboard](image.png)
+
 *Read this in other languages: [Bahasa Indonesia](#bahasa-indonesia).*
-
----
-
-## 🗺️ Architecture
-
-```mermaid
-graph TD
-    subgraph Agent Clients (Host)
-        Codex[Agent Codex] -->|JSON on stdin| CodexSender[codex_sender.py]
-        OpenCode[Agent OpenCode] -->|JSON on stdin| OpenCodeSender[opencode_sender.py]
-        Agy[Agent Agy] -->|JSON on stdin| AgySender[agy_sender.py]
-    end
-
-    subgraph Boros Server (Docker Container or Local)
-        Server[dashboard_server.js :4000]
-        History[(history_log.json)]
-        WebUI[index.html]
-    end
-
-    CodexSender -->|POST /api/metadata| Server
-    OpenCodeSender -->|POST /api/metadata| Server
-    AgySender -->|POST /api/metadata| Server
-
-    Server -->|Writes events| History
-    Server -->|Streams SSE /api/stream| WebUI
-
-    %% SQLite Polling for local DBs
-    CodexDB[(Codex SQLite DB)] -.->|Every 5s Polling| Server
-    OpenCodeDB[(OpenCode SQLite DB)] -.->|Every 5s Polling| Server
-```
 
 ---
 
@@ -47,6 +19,27 @@ graph TD
 - 📡 **Multi-Agent SSE Stream**: Live updates pushed instantly from Node.js server using Server-Sent Events.
 - 🔄 **Auto-Polling**: Automatically parses SQLite logs of Codex and OpenCode locally.
 - 🐳 **Docker Native**: Run seamlessly in containerized environments with a simple command.
+- 🍏 **macOS Menu Bar Integration**: View current token usage directly from your menu bar using SwiftBar.
+
+---
+
+## 🍏 macOS Menu Bar Integration
+
+You can monitor your agent token usage directly in your Mac's menu bar using [SwiftBar](https://github.com/swiftbar/SwiftBar).
+
+1. Install **SwiftBar** via Homebrew:
+   ```bash
+   brew install --cask swiftbar
+   ```
+2. Make sure the SwiftBar script in this project is executable:
+   ```bash
+   chmod +x /path/to/boros-token/agy_swiftbar.py
+   ```
+3. Create a symlink of the script to your SwiftBar plugins folder, appending the refresh rate (e.g., `.5s` to refresh every 5 seconds):
+   ```bash
+   ln -s /path/to/boros-token/agy_swiftbar.py ~/Library/Application\ Support/SwiftBar/Plugins/agy_swiftbar.5s.py
+   ```
+4. SwiftBar will now display the latest token metrics (e.g., `BT Codex:1.2K/300`) directly in your menu bar. Clicking it exposes more details and a link to open the web dashboard.
 
 ---
 
@@ -139,6 +132,19 @@ The dashboard accepts JSON payloads sent via POST to `/api/metadata` matching th
 ## Bahasa Indonesia
 
 **Boros Token** adalah dashboard lokal ringan untuk memantau pengeluaran token (input, output, cached tokens) dari berbagai AI/Agent CLI dalam satu tempat secara real-time.
+
+![Boros Token Dashboard](image.png)
+
+### Integrasi Menu Bar macOS (SwiftBar):
+1. Install **SwiftBar** menggunakan Homebrew:
+   ```bash
+   brew install --cask swiftbar
+   ```
+2. Jalankan perintah:
+   ```bash
+   chmod +x /path/to/boros-token/agy_swiftbar.py
+   ln -s /path/to/boros-token/agy_swiftbar.py ~/Library/Application\ Support/SwiftBar/Plugins/agy_swiftbar.5s.py
+   ```
 
 ### Cara Pakai dengan Docker:
 1. Pastikan **Docker Desktop** menyala.
