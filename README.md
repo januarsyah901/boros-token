@@ -8,8 +8,6 @@
 
 ![Boros Token Dashboard](image.png)
 
-*Read this in other languages: [Bahasa Indonesia](#bahasa-indonesia).*
-
 ---
 
 ## ⚡ Features
@@ -126,40 +124,6 @@ The dashboard accepts JSON payloads sent via POST to `/api/metadata` matching th
   }
 }
 ```
-
----
-
-## Bahasa Indonesia
-
-**Boros Token** adalah dashboard lokal ringan untuk memantau pengeluaran token (input, output, cached tokens) dari berbagai AI/Agent CLI dalam satu tempat secara real-time.
-
-![Boros Token Dashboard](image.png)
-
-### Integrasi Menu Bar macOS (SwiftBar):
-1. Install **SwiftBar** menggunakan Homebrew:
-   ```bash
-   brew install --cask swiftbar
-   ```
-2. Jalankan perintah:
-   ```bash
-   chmod +x /path/to/boros-token/agy_swiftbar.py
-   ln -s /path/to/boros-token/agy_swiftbar.py ~/Library/Application\ Support/SwiftBar/Plugins/agy_swiftbar.5s.py
-   ```
-
-### Cara Pakai dengan Docker:
-1. Pastikan **Docker Desktop** menyala.
-2. Jalankan perintah:
-   ```bash
-   docker compose up -d --build
-   ```
-3. Buka browser di `http://localhost:4000`.
-
-### Cara Pakai Native (Tanpa Docker):
-1. Jalankan server:
-   ```bash
-   ./boros-restart.sh
-   ```
-2. Akses dashboard di `http://localhost:4000`.
 
 ---
 
