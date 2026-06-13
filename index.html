@@ -1,0 +1,1506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>boros token</title>
+    <link rel="icon" type="image/png" href="/favicon.png?v=3">
+    <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=3">
+    <!-- Premium Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <!-- ChartJS for usage trends -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #f5f7fa;
+            --grid-color: rgba(90, 132, 245, 0.04);
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-muted: #64748b;
+            
+            --accent-terracotta: #5A84F5;
+            --accent-terracotta-hover: #3b6de6;
+            --accent-green: #10b981;
+            --accent-amber: #f59e0b;
+            
+            --tab-active-bg: #ffffff;
+            --tab-inactive-bg: #e2e8f0;
+            --tab-inactive-text: #64748b;
+            --card-shadow: 0 1px 3px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.02);
+            --pill-active-bg: #5A84F5;
+            --pill-active-text: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-color);
+            background-image: 
+                linear-gradient(var(--grid-color) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+            background-size: 20px 20px;
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 1rem 1.5rem;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        /* Header Styles */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 0.5rem;
+        }
+
+        .header-title-area {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo-icon-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 72px;
+            height: 72px;
+            border-radius: 8px;
+            background: transparent;
+            border: none;
+        }
+
+        h1 {
+            font-size: 1.45rem;
+            font-weight: 700;
+            letter-spacing: -0.015em;
+            color: var(--text-primary);
+        }
+
+        .header-subtitle {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-top: 0.15rem;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .icon-btn {
+            background: none;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.5rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            background-color: var(--card-bg);
+        }
+
+        .icon-btn:hover {
+            color: var(--text-primary);
+            border-color: var(--text-muted);
+        }
+
+        /* Live Status Badge */
+        .status-badge-inline {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.65rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            background: rgba(25, 25, 25, 0.04);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+        }
+
+        .status-badge-inline.connected {
+            background: rgba(16, 185, 129, 0.08);
+            border-color: rgba(16, 185, 129, 0.2);
+            color: #059669;
+        }
+
+        .status-badge-inline .dot {
+            width: 6px;
+            height: 6px;
+            background-color: var(--text-muted);
+            border-radius: 50%;
+        }
+
+        .status-badge-inline.connected .dot {
+            background-color: var(--accent-green);
+            animation: pulse-dot 2s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.6; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* Tabs Navigation Row */
+        .nav-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0.25rem;
+        }
+
+        .tabs-container {
+            display: flex;
+            background: var(--tab-inactive-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.25rem;
+            gap: 0.25rem;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 0.45rem 1.15rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--tab-inactive-text);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: var(--tab-active-bg);
+            color: var(--text-primary);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            font-weight: 600;
+        }
+
+        .time-filters {
+            display: flex;
+            gap: 0.15rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .agent-filter {
+            min-width: 170px;
+        }
+
+        .filter-btn {
+            background: none;
+            border: none;
+            padding: 0.35rem 0.75rem;
+            font-size: 0.825rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .filter-btn.active {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            font-weight: 600;
+            box-shadow: var(--card-shadow);
+        }
+
+        /* Metrics Cards Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+
+        @media (max-width: 900px) {
+            .metrics-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 550px) {
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .metric-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.25rem;
+            box-shadow: var(--card-shadow);
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .metric-label {
+            font-size: 0.725rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .metric-value {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .metric-value.input-tokens {
+            color: var(--accent-terracotta);
+        }
+
+        .metric-value.output-tokens {
+            color: var(--accent-green);
+        }
+
+        .metric-value.est-cost {
+            color: var(--accent-amber);
+        }
+
+        .metric-sub {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: auto;
+        }
+
+        .agent-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-top: 0.25rem;
+        }
+
+        @media (max-width: 900px) {
+            .agent-summary-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .agent-summary-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1rem 1.1rem;
+            box-shadow: var(--card-shadow);
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .agent-summary-label {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .agent-summary-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .agent-summary-meta {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        /* Panels */
+        .panel {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-title {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* Pill toggles */
+        .pill-toggle {
+            display: inline-flex;
+            background: var(--tab-inactive-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.175rem;
+            gap: 0.15rem;
+        }
+
+        .pill-btn {
+            background: none;
+            border: none;
+            padding: 0.3rem 0.85rem;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .pill-btn.active {
+            background: var(--pill-active-bg);
+            color: var(--pill-active-text);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Chart Canvas Container */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 280px;
+        }
+
+        /* Table & Lists Styles */
+        .model-list-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .select-styled {
+            padding: 0.45rem 2rem 0.45rem 1rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            cursor: pointer;
+            outline: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml;utf8,<svg fill='none' stroke='%236b6b63' stroke-width='2' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><polyline points='6 9 12 15 18 9'></polyline></svg>");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            background-size: 14px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.875rem;
+        }
+
+        th, td {
+            padding: 0.85rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.725rem;
+            letter-spacing: 0.05em;
+            background-color: rgba(25, 25, 25, 0.01);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background-color: rgba(25, 25, 25, 0.005);
+        }
+
+        .table-model-cell {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .expand-arrow {
+            color: var(--text-muted);
+            transition: transform 0.2s;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.725rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge.idle {
+            background: rgba(107, 107, 99, 0.1);
+            color: var(--text-muted);
+        }
+
+        .badge.working {
+            background: rgba(224, 90, 71, 0.1);
+            color: var(--accent-terracotta);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Details Tab styling */
+        .logs-table-container {
+            max-height: 75vh;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        .badge.cache {
+            background: rgba(16, 185, 129, 0.08);
+            border: 1px dashed rgba(16, 185, 129, 0.3);
+            color: #059669;
+            margin-left: 0.25rem;
+        }
+
+        .badge.prod-engine, .badge.prod-cli, .badge.prod-ide, .badge.prod-sdk {
+            text-transform: none;
+            border-radius: 6px;
+            padding: 0.15rem 0.45rem;
+        }
+        
+        .badge.prod-engine {
+            background: rgba(100, 116, 139, 0.08);
+            border: 1px solid rgba(100, 116, 139, 0.15);
+            color: #475569;
+        }
+        .badge.prod-cli {
+            background: rgba(90, 132, 245, 0.08);
+            border: 1px solid rgba(90, 132, 245, 0.15);
+            color: #3b6de6;
+        }
+        .badge.prod-ide {
+            background: rgba(139, 92, 246, 0.08);
+            border: 1px solid rgba(139, 92, 246, 0.15);
+            color: #7c3aed;
+        }
+        .badge.prod-sdk {
+            background: rgba(13, 148, 136, 0.08);
+            border: 1px solid rgba(13, 148, 136, 0.15);
+            color: #0d9488;
+        }
+
+        /* Layout Grid and Columns */
+        #dashboardGrid {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            width: 100%;
+        }
+
+        .main-column {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            width: 100%;
+        }
+
+        .sidebar-column {
+            width: 100%;
+        }
+
+        /* Stacked mode specific styles */
+        #dashboardGrid.layout-stacked .sidebar-column .side-widgets {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        @media (max-width: 900px) {
+            #dashboardGrid.layout-stacked .sidebar-column .side-widgets {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Split mode specific styles (applied only on desktop screens) */
+        @media (min-width: 1025px) {
+            #dashboardGrid.layout-split {
+                display: grid;
+                grid-template-columns: 2.8fr 1.2fr;
+                align-items: start;
+            }
+
+            #dashboardGrid.layout-split .sidebar-column .side-widgets {
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            #dashboardGrid.layout-split .metrics-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* Layout button active state */
+        .icon-btn.active {
+            background-color: rgba(224, 90, 71, 0.08);
+            color: var(--accent-terracotta);
+            border-color: rgba(224, 90, 71, 0.25);
+        }
+        .recent-request-row {
+            display: flex; 
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            padding: 0.6rem 0;
+            border-bottom: 1px solid rgba(25, 25, 25, 0.04);
+            gap: 0.75rem;
+        }        .recent-request-row:last-child {
+            border-bottom: none;
+        }
+        .recent-request-model {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex: 2;
+            min-width: 0;
+        }
+        .recent-request-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background-color: var(--accent-green);
+            flex-shrink: 0;
+        }
+        .recent-request-stats {
+            text-align: right;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            flex: 1;
+        }
+        .stat-up { color: var(--accent-terracotta); margin-right: 0.25rem; }
+        .stat-down { color: var(--accent-green); }
+        .recent-request-time {
+            text-align: right;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="header-title-area">
+                <div class="logo-icon-container">
+                    <img src="/favicon.png?v=3" alt="Mascot Logo" style="width: 100%; height: 100%; border-radius: 8px; object-fit: contain;">
+                </div>
+                <div>
+                    <h1>boros token</h1>
+                    <div class="header-subtitle">Multi-agent token monitor untuk Codex, OpenCode, Agy, dan CLI lain</div>
+                </div>
+            </div>        </header>
+
+        <!-- Navigation Row -->
+        <div class="nav-row">
+            <div class="tabs-container">
+                <button id="overviewTabBtn" class="tab-btn active">Overview</button>
+                <button id="detailsTabBtn" class="tab-btn">Details</button>
+            </div>
+            <div class="time-filters" id="timeFilters">
+                <select id="agentFilterSelect" class="select-styled agent-filter">
+                    <option value="all">All Agents</option>
+                </select>
+                <button class="filter-btn" data-filter="Today">Today</button>
+                <button class="filter-btn active" data-filter="24h">24h</button>
+                <button class="filter-btn" data-filter="7D">7D</button>
+                <button class="filter-btn" data-filter="30D">30D</button>
+                <button class="filter-btn" data-filter="60D">60D</button>
+            </div>
+        </div>
+
+        <!-- OVERVIEW TAB CONTENT -->
+        <div id="overviewTabContent" class="tab-content-wrapper">
+            <div id="dashboardGrid" class="layout-stacked">
+                <div class="main-column">
+                    <!-- Metrics Summary Cards -->
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <span class="metric-label">Total Requests</span>
+                            <span id="totalRequests" class="metric-value">0</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-label">Total Input Tokens</span>
+                            <span id="totalInput" class="metric-value input-tokens">0</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-label">Output Tokens</span>
+                            <span id="totalOutput" class="metric-value output-tokens">0</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-label">Est. Cost</span>
+                            <span id="estCost" class="metric-value est-cost">~$0.00</span>
+                            <span class="metric-sub">Estimated, not actual billing</span>
+                        </div>
+                    </div>
+
+                    <div id="agentSummaryGrid" class="agent-summary-grid"></div>
+
+                    <!-- Chart & Recent Panel Container -->
+                    <div class="chart-and-recent" style="display: grid; grid-template-columns: 2.2fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                        <!-- Chart Panel -->
+                        <div class="panel" style="margin-bottom: 0;">
+                            <div class="panel-header">
+                                <div class="pill-toggle">
+                                    <button id="chartToggleTokens" class="pill-btn active">Tokens</button>
+                                    <button id="chartToggleCost" class="pill-btn">Cost</button>
+                                </div>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="usageChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Recent Requests Panel -->
+                        <div class="panel" style="margin-bottom: 0; display: flex; flex-direction: column;">
+                            <span class="panel-title" style="font-size: 0.8rem; letter-spacing: 1px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.75rem;">Recent Requests</span>
+                            
+                            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-color); gap: 0.75rem;">
+                                <div style="flex: 2;">Model</div>
+                                <div style="flex: 1; text-align: right;">In / Out</div>
+                                <div style="flex: 1; text-align: right;">When</div>
+                            </div>
+                            
+                            <div id="recentRequestsList" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; max-height: 320px; padding-right: 0.25rem;">
+                                <!-- populated by js -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Usage by Model Table Panel -->
+                    <div class="panel">
+                        <div class="panel-header">
+                            <select class="select-styled">
+                                <option>Usage by Model</option>
+                            </select>
+                            <div class="pill-toggle">
+                                <button id="tableToggleCosts" class="pill-btn active">Costs</button>
+                                <button id="tableToggleTokens" class="pill-btn">Tokens</button>
+                            </div>
+                        </div>
+                        <div style="overflow-x: auto;">
+                            <table>
+                                <thead id="modelTableHead">
+                                    <!-- Rendered dynamically based on Costs vs Tokens -->
+                                </thead>
+                                <tbody id="modelTableBody">
+                                    <tr>
+                                        <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem 0;">No model activity logged yet.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sidebar-column">
+                    <!-- Side widgets (Context + Last Turn) -->
+                    <div class="side-widgets">
+                        <div class="panel">
+                            <span class="panel-title">Context Window Capacity</span>
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; margin-top: 0.5rem;">
+                                <!-- Tiny progress circular bar -->
+                                <div style="position: relative; width: 85px; height: 85px;">
+                                    <svg width="85" height="85">
+                                        <circle stroke="var(--border-color)" stroke-width="8" fill="transparent" r="34" cx="42.5" cy="42.5" />
+                                        <circle id="contextProgressRing" stroke="var(--accent-terracotta)" stroke-width="8" stroke-linecap="round" fill="transparent" r="34" cx="42.5" cy="42.5" stroke-dasharray="213.6" stroke-dashoffset="213.6" style="transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dashoffset 0.6s;" />
+                                    </svg>
+                                    <div id="contextPercentText" style="position: absolute; top:50%; left:50%; transform: translate(-50%, -50%); font-weight: 700; font-size: 0.95rem;">0%</div>
+                                </div>
+                                <div style="display: flex; flex-direction: column; gap: 0.25rem; flex: 1;">
+                                    <div id="contextCapDetail" style="font-weight: 600; font-size: 0.9rem;">0 / 1.05M tokens</div>
+                                    <div id="contextRemainingDetail" style="font-size: 0.8rem; color: var(--text-muted);">100% capacity remaining</div>
+                                    <div id="activeModelDetail" style="font-size: 0.8rem; font-weight: 600; color: var(--accent-terracotta); margin-top: 0.25rem;">Model: —</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="panel">
+                            <span class="panel-title">Last Turn Details</span>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.25rem; font-size: 0.85rem;">
+                                <div style="border-right: 1px solid var(--border-color); padding-right: 0.5rem;">
+                                    <span style="color: var(--text-muted); font-size: 0.75rem; display: block;">Input / Cache</span>
+                                    <strong id="lastInputVal" style="font-size: 1.05rem;">0</strong>
+                                    <span id="lastCacheReadVal" style="color: var(--accent-green); font-size: 0.725rem; display: block; margin-top: 0.1rem;">Cache: 0</span>
+                                </div>
+                                <div style="padding-left: 0.5rem;">
+                                    <span style="color: var(--text-muted); font-size: 0.75rem; display: block;">Output Tokens</span>
+                                    <strong id="lastOutputVal" style="font-size: 1.05rem;">0</strong>
+                                    <span id="lastStateVal" class="badge idle" style="margin-top: 0.15rem;">idle</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DETAILS TAB CONTENT (LOG DETAILS) -->
+        <div id="detailsTabContent" class="tab-content-wrapper hidden">
+            <div class="panel">
+                <span class="panel-title">Granular Session Request Logs</span>
+                <div class="logs-table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Agent</th>
+                                <th>Project</th>
+                                <th>Model</th>
+                                <th>State</th>
+                                <th>Input</th>
+                                <th>Output</th>
+                                <th>Cache Read</th>
+                                <th>Cum. Input</th>
+                                <th>Cum. Output</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logsTableBody">
+                            <tr>
+                                <td colspan="10" style="text-align: center; color: var(--text-muted); padding: 2rem 0;">No requests recorded yet.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const totalRequests = document.getElementById('totalRequests');
+        const totalInput = document.getElementById('totalInput');
+        const totalOutput = document.getElementById('totalOutput');
+        const estCost = document.getElementById('estCost');
+
+        // Circular capacity progress
+        const contextProgressRing = document.getElementById('contextProgressRing');
+        const contextPercentText = document.getElementById('contextPercentText');
+        const contextCapDetail = document.getElementById('contextCapDetail');
+        const contextRemainingDetail = document.getElementById('contextRemainingDetail');
+        const activeModelDetail = document.getElementById('activeModelDetail');
+
+        // Last Turn details
+        const lastInputVal = document.getElementById('lastInputVal');
+        const lastCacheReadVal = document.getElementById('lastCacheReadVal');
+        const lastOutputVal = document.getElementById('lastOutputVal');
+        const lastStateVal = document.getElementById('lastStateVal');
+
+        // Tables & Tabs
+        const overviewTabBtn = document.getElementById('overviewTabBtn');
+        const detailsTabBtn = document.getElementById('detailsTabBtn');
+        const overviewTabContent = document.getElementById('overviewTabContent');
+        const detailsTabContent = document.getElementById('detailsTabContent');
+
+        const chartToggleTokens = document.getElementById('chartToggleTokens');
+        const chartToggleCost = document.getElementById('chartToggleCost');
+        const agentFilterSelect = document.getElementById('agentFilterSelect');
+
+        const tableToggleCosts = document.getElementById('tableToggleCosts');
+        const tableToggleTokens = document.getElementById('tableToggleTokens');
+
+        const modelTableHead = document.getElementById('modelTableHead');
+        const modelTableBody = document.getElementById('modelTableBody');
+        const logsTableBody = document.getElementById('logsTableBody');
+        const agentSummaryGrid = document.getElementById('agentSummaryGrid');
+
+        const dashboardGrid = document.getElementById('dashboardGrid');
+
+        // State variables
+        let latestData = { latestState: null, history: [] };
+        let activeAgentFilter = 'all';
+        let activeChartMode = 'tokens'; // 'tokens' or 'cost'
+        let activeTableMode = 'costs';  // 'costs' or 'tokens'
+
+        // Pricing Rules (per 1,000,000 tokens)
+        const PRICING = {
+            'gemini-flash': { input: 0.075, output: 0.30 },
+            'gemini-pro': { input: 1.25, output: 5.00 },
+            'claude-sonnet': { input: 3.00, output: 15.00 },
+            'claude-opus': { input: 15.00, output: 75.00 },
+            'claude-haiku': { input: 0.80, output: 4.00 },
+            'gpt-oss': { input: 0.50, output: 1.50 },
+            'default': { input: 0.075, output: 0.30 }
+        };
+
+        function getPricingForModel(modelName) {
+            const name = (modelName || '').toLowerCase();
+            if (name.includes('opus')) return PRICING['claude-opus'];
+            if (name.includes('sonnet')) return PRICING['claude-sonnet'];
+            if (name.includes('haiku')) return PRICING['claude-haiku'];
+            if (name.includes('claude')) return PRICING['claude-sonnet'];
+            if (name.includes('gpt-oss') || name.includes('gpt')) return PRICING['gpt-oss'];
+            if (name.includes('pro')) return PRICING['gemini-pro'];
+            return PRICING['gemini-flash'];
+        }
+
+        function getProviderForModel(modelName) {
+            const name = (modelName || '').toLowerCase();
+            if (name.includes('claude') || name.includes('sonnet') || name.includes('opus') || name.includes('haiku')) return 'Anthropic';
+            if (name.includes('gpt')) return 'OpenAI';
+            return 'Google';
+        }
+
+        function getDisplaySource(source) {
+            const map = {
+                codex: 'Codex',
+                opencode: 'OpenCode',
+                agy: 'Agy',
+                terminal: 'Antigravity CLI',
+                antigravity: 'Antigravity',
+                code: 'Antigravity IDE',
+                sdk: 'Antigravity SDK'
+            };
+            return map[(source || '').toLowerCase()] || (source || 'Unknown');
+        }
+
+        // Circular ring circumference (2 * PI * r) where r = 34
+        const ringCircumference = 213.6;
+
+        function setContextProgress(percent) {
+            const offset = ringCircumference - (percent / 100 * ringCircumference);
+            contextProgressRing.style.strokeDashoffset = offset;
+            contextPercentText.textContent = `${percent.toFixed(1)}%`;
+        }
+
+        // Relative time ago helper
+        function formatRelativeTime(isoString) {
+            if (!isoString) return '—';
+            try {
+                const past = new Date(isoString);
+                const now = new Date();
+                const diffMs = now - past;
+                const diffSec = Math.floor(diffMs / 1000);
+                if (diffSec < 10) return 'just now';
+                if (diffSec < 60) return `${diffSec}s ago`;
+                const diffMin = Math.floor(diffSec / 60);
+                if (diffMin < 60) return `${diffMin}m ago`;
+                const diffHr = Math.floor(diffMin / 60);
+                if (diffHr < 24) return `${diffHr}h ago`;
+                const diffDay = Math.floor(diffHr / 24);
+                return `${diffDay}d ago`;
+            } catch(e) {
+                return '—';
+            }
+        }
+
+        // Helper to extract project name from CWD path
+        function getProjectName(cwd) {
+            if (!cwd || cwd === 'Global' || cwd === 'Unknown') return 'Global/No CWD';
+            const cleanPath = cwd.replace(/[\/\\]$/, '');
+            const parts = cleanPath.split(/[\/\\]/);
+            return parts[parts.length - 1] || 'Global';
+        }
+
+        // Format Big Numbers
+        function formatInt(num) {
+            return (num || 0).toLocaleString();
+        }
+
+        function formatCurrency(val) {
+            return '$' + (val || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 5 });
+        }
+
+        // Initialize Chart
+        const ctx = document.getElementById('usageChart').getContext('2d');
+        const usageChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    {
+                        label: 'Prompt Input Tokens',
+                        data: [],
+                        borderColor: '#e05a47',
+                        backgroundColor: 'rgba(224, 90, 71, 0.04)',
+                        borderWidth: 2,
+                        tension: 0.35,
+                        fill: true,
+                        pointRadius: 3,
+                        pointHoverRadius: 5
+                    },
+                    {
+                        label: 'Candidate Output Tokens',
+                        data: [],
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.02)',
+                        borderWidth: 2,
+                        tension: 0.35,
+                        fill: true,
+                        pointRadius: 3,
+                        pointHoverRadius: 5
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#6b6b63',
+                            font: { family: 'Inter', size: 11, weight: '500' }
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        padding: 10,
+                        backgroundColor: 'rgba(25, 25, 25, 0.95)',
+                        titleFont: { family: 'Inter', size: 12, weight: '600' },
+                        bodyFont: { family: 'Inter', size: 11 }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#6b6b63', font: { family: 'Inter', size: 10 } }
+                    },
+                    y: {
+                        grid: { color: 'rgba(25, 25, 25, 0.05)' },
+                        ticks: { color: '#6b6b63', font: { family: 'Inter', size: 10 } }
+                    }
+                }
+            }
+        });
+
+        // Toggle Tabs
+        overviewTabBtn.addEventListener('click', () => {
+            overviewTabBtn.classList.add('active');
+            detailsTabBtn.classList.remove('active');
+            overviewTabContent.classList.remove('hidden');
+            detailsTabContent.classList.add('hidden');
+        });
+
+        detailsTabBtn.addEventListener('click', () => {
+            detailsTabBtn.classList.add('active');
+            overviewTabBtn.classList.remove('active');
+            detailsTabContent.classList.remove('hidden');
+            overviewTabContent.classList.add('hidden');
+        });
+
+        // Toggle Chart View
+        chartToggleTokens.addEventListener('click', () => {
+            chartToggleTokens.classList.add('active');
+            chartToggleCost.classList.remove('active');
+            activeChartMode = 'tokens';
+            renderChartTrend();
+        });
+
+        chartToggleCost.addEventListener('click', () => {
+            chartToggleCost.classList.add('active');
+            chartToggleTokens.classList.remove('active');
+            activeChartMode = 'cost';
+            renderChartTrend();
+        });
+
+        // Toggle Model Table View
+        tableToggleCosts.addEventListener('click', () => {
+            tableToggleCosts.classList.add('active');
+            tableToggleTokens.classList.remove('active');
+            activeTableMode = 'costs';
+            renderModelTable();
+        });
+
+        tableToggleTokens.addEventListener('click', () => {
+            tableToggleTokens.classList.add('active');
+            tableToggleCosts.classList.remove('active');
+            activeTableMode = 'tokens';
+            renderModelTable();
+        });
+
+        // --- Time Filter & Update Logic ---
+        let activeTimeFilter = '24h';
+        const timeFilterMap = {
+            'Today': 1000 * 60 * 60 * 24, // simplified today
+            '24h': 1000 * 60 * 60 * 24,
+            '7D': 1000 * 60 * 60 * 24 * 7,
+            '30D': 1000 * 60 * 60 * 24 * 30,
+            '60D': 1000 * 60 * 60 * 24 * 60
+        };
+
+        let filteredHistoryData = [];
+
+        document.getElementById('timeFilters').addEventListener('click', (e) => {
+            if (e.target.classList.contains('filter-btn')) {
+                document.querySelectorAll('#timeFilters .filter-btn').forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+                activeTimeFilter = e.target.dataset.filter;
+                if (latestData && latestData.latestState) {
+                    updateDashboard(latestData.latestState, latestData.history);
+                }
+            }
+        });
+
+        agentFilterSelect.addEventListener('change', () => {
+            activeAgentFilter = agentFilterSelect.value;
+            if (latestData && latestData.latestState) {
+                updateDashboard(latestData.latestState, latestData.history);
+            }
+        });
+
+        function getSourceKey(evt) {
+            return (evt.source || evt.product || 'unknown').toLowerCase();
+        }
+
+        function filterHistoryByAgent(history) {
+            if (!history) return [];
+            if (activeAgentFilter === 'all') return history;
+            return history.filter(evt => getSourceKey(evt) === activeAgentFilter);
+        }
+
+        function filterHistoryByTime(history) {
+            if (!history) return [];
+            const now = Date.now();
+            const ms = timeFilterMap[activeTimeFilter] || timeFilterMap['24h'];
+            if (activeTimeFilter === 'Today') {
+                const today = new Date();
+                today.setHours(0,0,0,0);
+                return history.filter(evt => new Date(evt.timestamp) >= today);
+            }
+            return history.filter(evt => {
+                return (now - new Date(evt.timestamp).getTime()) <= ms;
+            });
+        }
+
+        function updateDashboard(state, historyListRaw) {
+            latestData = { latestState: state, history: historyListRaw || [] };
+            const timeFiltered = filterHistoryByTime(latestData.history);
+            filteredHistoryData = filterHistoryByAgent(timeFiltered);
+
+            const agentSet = new Map();
+            latestData.history.forEach(evt => {
+                const key = getSourceKey(evt);
+                if (!agentSet.has(key)) agentSet.set(key, getDisplaySource(key));
+            });
+            const current = agentFilterSelect.value || 'all';
+            agentFilterSelect.innerHTML = '<option value="all">All Agents</option>' + [...agentSet.entries()]
+                .sort((a, b) => a[1].localeCompare(b[1]))
+                .map(([key, label]) => `<option value="${key}">${label}</option>`).join('');
+            agentFilterSelect.value = agentSet.has(current) || current === 'all' ? current : 'all';
+
+            // 1. Calculate General Aggregations
+            const reqs = filteredHistoryData.filter(evt => evt.current_input > 0 || evt.current_output > 0);
+            totalRequests.textContent = reqs.length;
+
+            let totalInVal = 0;
+            let totalOutVal = 0;
+            let totalCostVal = 0;
+
+            filteredHistoryData.forEach(evt => {
+                totalInVal += evt.current_input;
+                totalOutVal += evt.current_output;
+                const pricing = getPricingForModel(evt.model);
+                const inCost = (evt.current_input / 1000000) * pricing.input;
+                const outCost = (evt.current_output / 1000000) * pricing.output;
+                totalCostVal += (inCost + outCost);
+            });
+
+            totalInput.textContent = formatInt(totalInVal);
+            totalOutput.textContent = formatInt(totalOutVal);
+            estCost.textContent = `~$${totalCostVal.toFixed(2)}`;
+
+            const agentSummary = {};
+            filteredHistoryData.forEach(evt => {
+                const key = getSourceKey(evt);
+                if (!agentSummary[key]) {
+                    agentSummary[key] = { label: getDisplaySource(key), requests: 0, input: 0, output: 0 };
+                }
+                if (evt.current_input > 0 || evt.current_output > 0) agentSummary[key].requests += 1;
+                agentSummary[key].input += evt.current_input;
+                agentSummary[key].output += evt.current_output;
+            });
+
+            const agentRows = Object.entries(agentSummary).sort((a, b) => b[1].input + b[1].output - (a[1].input + a[1].output));
+            agentSummaryGrid.innerHTML = agentRows.length
+                ? agentRows.map(([key, summary]) => `
+                    <div class="agent-summary-card">
+                        <div class="agent-summary-label">${summary.label}</div>
+                        <div class="agent-summary-value">${formatInt(summary.input + summary.output)}</div>
+                        <div class="agent-summary-meta">${formatInt(summary.requests)} requests · ${formatInt(summary.input)} in · ${formatInt(summary.output)} out</div>
+                    </div>
+                `).join('')
+                : `
+                    <div class="agent-summary-card" style="grid-column: 1 / -1;">
+                        <div class="agent-summary-label">Agents</div>
+                        <div class="agent-summary-value">0</div>
+                        <div class="agent-summary-meta">No activity for the selected time window.</div>
+                    </div>
+                `;
+
+            // 2. Capacity progress ring
+            const percentageUsed = state?.context_window?.used_percentage || 0;
+            setContextProgress(percentageUsed);
+            
+            const windowSize = state?.context_window?.context_window_size || 1048576;
+            contextCapDetail.textContent = `${formatInt(totalInVal + totalOutVal)} / ${formatInt(windowSize)} tokens`;
+            contextRemainingDetail.textContent = `${(100 - percentageUsed).toFixed(1)}% capacity remaining`;
+            activeModelDetail.textContent = `Agent: ${getDisplaySource(getSourceKey(state || {}))} | Model: ${state?.model?.display_name || state?.model?.id || 'Unknown Model'}`;
+
+            // 3. Last turn stats (find last active turn with >0 tokens to prevent auth/idle events from clearing it)
+            if (filteredHistoryData && filteredHistoryData.length > 0) {
+                let lastTurn = filteredHistoryData[filteredHistoryData.length - 1];
+                for (let i = filteredHistoryData.length - 1; i >= 0; i--) {
+                    if (filteredHistoryData[i].current_input > 0 || filteredHistoryData[i].current_output > 0) {
+                        lastTurn = filteredHistoryData[i];
+                        break;
+                    }
+                }
+                lastInputVal.textContent = formatInt(lastTurn.current_input);
+                lastCacheReadVal.textContent = `Cache: ${formatInt(lastTurn.current_cache_read)}`;
+                lastOutputVal.textContent = formatInt(lastTurn.current_output);
+                
+                const agentState = lastTurn.state || 'idle';
+                lastStateVal.textContent = agentState;
+                lastStateVal.className = `badge ${agentState}`;
+            }
+
+            // 4. Render panels
+            renderChartTrend();
+            renderModelTable();
+            renderGranularLogs();
+            renderRecentRequests();
+        }
+
+        function renderRecentRequests() {
+            const container = document.getElementById('recentRequestsList');
+            const reqs = filteredHistoryData.filter(evt => evt.current_input > 0 || evt.current_output > 0).slice(-20).reverse();
+            
+            if (reqs.length === 0) {
+                container.innerHTML = '<div style="color: var(--text-muted); font-size: 0.8rem; text-align: center; padding: 2rem 0;">No recent requests</div>';
+                return;
+            }
+
+            container.innerHTML = reqs.map(evt => `
+                <div class="recent-request-row">
+                    <div class="recent-request-model">
+                        <div class="recent-request-dot"></div>
+                        <span title="${evt.model}">${evt.model}</span>
+                    </div>
+                    <div class="recent-request-stats">
+                        <span class="stat-up">${formatInt(evt.current_input)}↑</span>
+                        <span class="stat-down">${formatInt(evt.current_output)}↓</span>
+                    </div>
+                    <div class="recent-request-time">${formatRelativeTime(evt.timestamp)}</div>
+                </div>
+            `).join('');
+        }
+
+        // Render Chart Trend
+        function renderChartTrend() {
+            const historyList = filteredHistoryData;
+            if (!historyList || historyList.length === 0) return;
+
+            // Take last 20 events with active token usage
+            const chartSlice = historyList.slice(-20);
+            
+            // Format labels as local times
+            usageChart.data.labels = chartSlice.map(evt => {
+                const time = new Date(evt.timestamp);
+                return isNaN(time.getTime()) ? '—' : time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            });
+
+            if (activeChartMode === 'tokens') {
+                usageChart.data.datasets[0].label = 'Prompt Input Tokens';
+                usageChart.data.datasets[0].data = chartSlice.map(evt => evt.current_input);
+                
+                usageChart.data.datasets[1].label = 'Candidate Output Tokens';
+                usageChart.data.datasets[1].data = chartSlice.map(evt => evt.current_output);
+                
+                usageChart.options.scales.y.ticks.callback = function(value) {
+                    if (value >= 1000) return (value / 1000).toFixed(1) + 'k';
+                    return value;
+                };
+            } else {
+                usageChart.data.datasets[0].label = 'Input Cost ($)';
+                usageChart.data.datasets[0].data = chartSlice.map(evt => {
+                    const pricing = getPricingForModel(evt.model);
+                    return (evt.current_input / 1000000) * pricing.input;
+                });
+
+                usageChart.data.datasets[1].label = 'Output Cost ($)';
+                usageChart.data.datasets[1].data = chartSlice.map(evt => {
+                    const pricing = getPricingForModel(evt.model);
+                    return (evt.current_output / 1000000) * pricing.output;
+                });
+
+                usageChart.options.scales.y.ticks.callback = function(value) {
+                    return '$' + value.toFixed(5);
+                };
+            }
+
+            usageChart.update();
+        }
+
+        // Render Usage By Model Table
+        function renderModelTable() {
+            const historyList = filteredHistoryData;
+            
+            // Aggregating usage by model and project/CWD
+            const modelSummary = {};
+            historyList.forEach(evt => {
+                const modelName = evt.model || 'Unknown Model';
+                const sourceName = getDisplaySource(getSourceKey(evt));
+                const cwdPath = evt.cwd || 'Global';
+                const groupKey = sourceName + '::' + modelName + '::' + cwdPath;
+
+                if (!modelSummary[groupKey]) {
+                    modelSummary[groupKey] = {
+                        name: modelName,
+                        source: sourceName,
+                        project: getProjectName(cwdPath),
+                        requests: 0,
+                        lastUsed: evt.timestamp,
+                        inputTokens: 0,
+                        outputTokens: 0,
+                        inputCost: 0,
+                        outputCost: 0
+                    };
+                }
+                
+                const pricing = getPricingForModel(modelName);
+                if (evt.current_input > 0 || evt.current_output > 0) {
+                    modelSummary[groupKey].requests += 1;
+                }
+                
+                modelSummary[groupKey].lastUsed = evt.timestamp; // update to latest
+                modelSummary[groupKey].inputTokens += evt.current_input;
+                modelSummary[groupKey].outputTokens += evt.current_output;
+                
+                modelSummary[groupKey].inputCost += (evt.current_input / 1000000) * pricing.input;
+                modelSummary[groupKey].outputCost += (evt.current_output / 1000000) * pricing.output;
+            });
+
+            // Set Headers
+            if (activeTableMode === 'costs') {
+                modelTableHead.innerHTML = `
+                    <tr>
+                        <th>Model</th>
+                        <th>Agent</th>
+                        <th>Project</th>
+                        <th>Provider</th>
+                        <th>Requests</th>
+                        <th>Last Used</th>
+                        <th>Input Cost</th>
+                        <th>Output Cost</th>
+                        <th>Total Cost</th>
+                    </tr>
+                `;
+            } else {
+                modelTableHead.innerHTML = `
+                    <tr>
+                        <th>Model</th>
+                        <th>Agent</th>
+                        <th>Project</th>
+                        <th>Provider</th>
+                        <th>Requests</th>
+                        <th>Last Used</th>
+                        <th>Input Tokens</th>
+                        <th>Output Tokens</th>
+                        <th>Total Tokens</th>
+                    </tr>
+                `;
+            }
+
+            // Populate rows
+            const models = Object.values(modelSummary);
+            if (models.length === 0) {
+                modelTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 2rem 0;">No model activity logged yet.</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            modelTableBody.innerHTML = '';
+            models.forEach(model => {
+                const totalCost = model.inputCost + model.outputCost;
+                const totalTokens = model.inputTokens + model.outputTokens;
+                const tr = document.createElement('tr');
+                
+                // Expand SVG icon arrow + model name
+                const modelCell = `
+                    <div class="table-model-cell">
+                        <svg class="expand-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        <span>${model.name}</span>
+                    </div>
+                `;
+
+                if (activeTableMode === 'costs') {
+                    tr.innerHTML = `
+                        <td>${modelCell}</td>
+                        <td style="color: var(--text-muted);">${model.source}</td>
+                        <td style="color: var(--text-muted); font-weight: 500;">${model.project}</td>
+                        <td style="color: var(--text-muted);">${getProviderForModel(model.name)}</td>
+                        <td>${model.requests}</td>
+                        <td>${formatRelativeTime(model.lastUsed)}</td>
+                        <td>${formatCurrency(model.inputCost)}</td>
+                        <td>${formatCurrency(model.outputCost)}</td>
+                        <td style="font-weight: 700; color: var(--accent-amber);">${formatCurrency(totalCost)}</td>
+                    `;
+                } else {
+                    tr.innerHTML = `
+                        <td>${modelCell}</td>
+                        <td style="color: var(--text-muted);">${model.source}</td>
+                        <td style="color: var(--text-muted); font-weight: 500;">${model.project}</td>
+                        <td style="color: var(--text-muted);">${getProviderForModel(model.name)}</td>
+                        <td>${model.requests}</td>
+                        <td>${formatRelativeTime(model.lastUsed)}</td>
+                        <td>${formatInt(model.inputTokens)}</td>
+                        <td>${formatInt(model.outputTokens)}</td>
+                        <td style="font-weight: 700; color: var(--accent-terracotta);">${formatInt(totalTokens)}</td>
+                    `;
+                }
+                modelTableBody.appendChild(tr);
+            });
+        }
+
+        // Render Details Tab Logs
+        function renderGranularLogs() {
+            const historyList = filteredHistoryData;
+            if (!historyList || historyList.length === 0) {
+                logsTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="10" style="text-align: center; color: var(--text-muted); padding: 2rem 0;">No requests recorded yet.</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            logsTableBody.innerHTML = '';
+            // Render in reverse chronological order (newest first)
+            [...historyList].reverse().forEach(evt => {
+                const tr = document.createElement('tr');
+                const time = new Date(evt.timestamp);
+                const timeStr = isNaN(time.getTime()) ? '—' : time.toLocaleTimeString();
+                
+                const cacheBadge = evt.current_cache_read > 0 ? `<span class="badge cache">HIT</span>` : '';
+                const agentState = evt.state || 'idle';
+                const projName = getProjectName(evt.cwd);
+
+                const source = getDisplaySource(getSourceKey(evt));
+                const prodClass = getSourceKey(evt) === 'codex' ? 'prod-ide' : 'prod-cli';
+                const prod = { name: source, class: prodClass };
+                const prodBadge = `<span class="badge ${prod.class}">${prod.name}</span>`;
+
+                tr.innerHTML = `
+                    <td>${timeStr}</td>
+                    <td>${prodBadge}</td>
+                    <td style="color: var(--text-muted); font-weight: 500;">${projName}</td>
+                    <td style="font-weight: 600;">${evt.model}</td>
+                    <td><span class="badge ${agentState}">${agentState}</span></td>
+                    <td>${formatInt(evt.current_input)}</td>
+                    <td>${formatInt(evt.current_output)}</td>
+                    <td>${formatInt(evt.current_cache_read)}${cacheBadge}</td>
+                    <td style="color: var(--text-muted);">${formatInt(evt.total_input)}</td>
+                    <td style="color: var(--text-muted);">${formatInt(evt.total_output)}</td>
+                `;
+                logsTableBody.appendChild(tr);
+            });
+        }
+
+        // SSE Connection with auto-reconnect
+        let sseInstance = null;
+        let sseConnected = false;
+
+        function connectSSE() {
+            if (sseInstance) {
+                try { sseInstance.close(); } catch(e) {}
+            }
+
+            const sse = new EventSource('/api/stream');
+            sseInstance = sse;
+
+            sse.onopen = () => {
+                sseConnected = true;
+                console.log('[SSE] Connected');
+            };
+
+            sse.onerror = () => {
+                sseConnected = false;
+                sse.close();
+                console.warn('[SSE] Disconnected, reconnecting in 3s...');
+                setTimeout(connectSSE, 3000);
+            };
+
+            sse.onmessage = (event) => {
+                // Skip heartbeat comments (lines starting with ':')
+                if (!event.data || event.data.trim() === '') return;
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data && (data.latestState !== undefined || data.history !== undefined)) {
+                        updateDashboard(data.latestState, data.history);
+                    }
+                } catch (e) {
+                    console.error('[SSE] Error parsing data:', e);
+                }
+            };
+        }
+
+        // Start SSE connection
+        connectSSE();
+
+        // Always-on polling backup every 5s (acts as safety net even when SSE is connected)
+        setInterval(() => {
+            fetch('/api/state')
+                .then(res => res.json())
+                .then(data => {
+                    // Only update from poll if SSE is not connected (avoid duplicate renders)
+                    if (!sseConnected) {
+                        updateDashboard(data.latestState, data.history);
+                    }
+                })
+                .catch(() => {});
+        }, 5000);
+    </script>
+</body>
+</html>

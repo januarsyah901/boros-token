@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  boros-token:
+    build: .
+    container_name: boros-token
+    ports:
+      - "4000:4000"
+    restart: unless-stopped
+    volumes:
+      # Mount the history database to persist logs
+      - ./history_log.json:/usr/src/app/history_log.json
+      # Mount CLI agent databases as read-only to /root
+      - ~/.codex:/root/.codex:ro
+      - ~/.local/share/opencode:/root/.local/share/opencode:ro
