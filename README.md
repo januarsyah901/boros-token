@@ -1,4 +1,4 @@
-# 🪙 Boros Token
+# Boros Token
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Docker Support](https://img.shields.io/badge/Docker-Supported-blue.svg?logo=docker)](docker-compose.yml)
@@ -10,7 +10,7 @@
 
 ---
 
-## ⚡ Features
+## Features
 
 - 📊 **Real-time Metrics**: View accumulated token consumption (Input, Output, Cache) and estimated costs.
 - 📈 **Trend Graphs**: Interactive charts showing token usage trends over time via Chart.js.
@@ -21,7 +21,7 @@
 
 ---
 
-## 🍏 macOS Menu Bar Integration
+## macOS Menu Bar Integration
 
 You can monitor your agent token usage directly in your Mac's menu bar using [SwiftBar](https://github.com/swiftbar/SwiftBar).
 
@@ -41,7 +41,7 @@ You can monitor your agent token usage directly in your Mac's menu bar using [Sw
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Option A: Using Docker (Recommended & Auto-runs on Login)
 
@@ -73,7 +73,7 @@ You can monitor your agent token usage directly in your Mac's menu bar using [Sw
 
 ---
 
-## 🔌 Integrating Agents (Wiring)
+## Integrating Agents (Wiring)
 
 Each agent sends a JSON payload to `stdin` of its respective sender script.
 
@@ -95,7 +95,7 @@ alias agy-token='python3 /path/to/boros-token/agy_sender.py'
 
 ---
 
-## 📋 Payload Format
+## Payload Format
 
 The dashboard accepts JSON payloads sent via POST to `/api/metadata` matching this schema:
 
@@ -127,6 +127,6 @@ The dashboard accepts JSON payloads sent via POST to `/api/metadata` matching th
 
 ---
 
-## 📄 License
+## License
 
 Distributed under the MIT License. See [LICENSE](LICENSE) for more information.
