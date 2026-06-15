@@ -100,15 +100,23 @@ alias agy-token='python3 /path/to/boros-token/agy_sender.py'
 If you are using an AI coding agent CLI in this workspace and want it to wire itself up to this dashboard automatically, you can copy-paste the following prompt and send it to your agent:
 
 ```text
-Please integrate this agent CLI workspace with the Boros Token monitoring dashboard. 
-To do this:
-1. Locate the configuration files or wrapper commands for this agent CLI (such as custom hooks, post-execution scripts, or terminal aliases).
-2. Configure the CLI to pipe its JSON metadata/token telemetry output into the Boros Token sender script:
+Please integrate this agent CLI workspace with the Boros Token monitoring dashboard.
+
+First, ask me whether I want to set up the dashboard using Docker (Recommended) or Local/Native mode.
+
+Based on my preference, proceed with:
+1. If Docker is preferred:
+   - Help me build and start the container with: `docker compose up -d --build`
+   - If I want it to auto-run on login, guide me to check "Start Docker Desktop when you log in" in my Docker Desktop Settings.
+2. If Local/Native is preferred:
+   - Wire up the server execution using `./boros-restart.sh`.
+3. Locate the configuration files or wrapper commands for this agent CLI (such as custom hooks, post-execution scripts, or terminal aliases).
+4. Configure the CLI to pipe its JSON metadata/token telemetry output into the Boros Token sender script:
    - For Agy: `/absolute/path/to/boros-token/agy_sender.py`
    - For Codex: `/absolute/path/to/boros-token/codex_sender.py`
    - For OpenCode: `/absolute/path/to/boros-token/opencode_sender.py`
    (Be sure to replace `/absolute/path/to/boros-token` with the actual path where this project is located on my machine).
-3. If no built-in piping is available, wrap the terminal launch command for this agent so it intercepts stdout and routes it through the sender script.
+5. If no built-in piping is available, wrap the terminal launch command for this agent so it intercepts stdout and routes it through the sender script.
 ```
 
 ---
