@@ -10,6 +10,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 STATE_FILE = os.path.join(ROOT, ".boros_poller_state.json")
 SERVER_URL = "http://localhost:4000/api/metadata"
 CODEX_DB = os.path.expanduser("~/.codex/logs_2.sqlite")
+CODEX_STATE_DB = os.path.expanduser("~/.codex/state_5.sqlite")
 OPENCODE_DB = os.path.expanduser("~/.local/share/opencode/opencode.db")
 
 
@@ -60,72 +61,117 @@ def parse_int(body, key):
 
 
 def poll_codex(state):
-    if not os.path.exists(CODEX_DB):
-        return
+    # 1. Poll from state_5.sqlite if exists
+    if os.path.exists(CODEX_STATE_DB):
+        if "codex_thread_tokens" not in state:
+            state["codex_thread_tokens"] = {}
 
-    last_id = int(state.get("codex_last_log_id") or 0)
-    query = """
-        select id, ts, feedback_log_body
-        from logs
-        where id > ?
-          and target = 'codex_otel.trace_safe'
-          and feedback_log_body like '%event.name="codex.sse_event"%'
-          and feedback_log_body like '%event.kind=response.completed%'
-          and feedback_log_body like '%input_token_count=%'
-        order by id asc
-        limit 20
-    """
-    first_run_query = """
-        select id, ts, feedback_log_body
-        from logs
-        where target = 'codex_otel.trace_safe'
-          and feedback_log_body like '%event.name="codex.sse_event"%'
-          and feedback_log_body like '%event.kind=response.completed%'
-          and feedback_log_body like '%input_token_count=%'
-        order by id desc
-        limit 1
-    """
+        try:
+            conn = sqlite3.connect(f"file:{CODEX_STATE_DB}?mode=ro", uri=True)
+            rows = conn.execute("select id, model, tokens_used, cwd from threads where tokens_used > 0").fetchall()
+            conn.close()
+        except Exception:
+            rows = []
 
-    try:
-        conn = sqlite3.connect(f"file:{CODEX_DB}?mode=ro", uri=True)
-        rows = conn.execute(first_run_query if last_id == 0 else query, () if last_id == 0 else (last_id,)).fetchall()
-        conn.close()
-    except Exception:
-        return
+        for thread_id, model, tokens_used, cwd in rows:
+            tokens_used = int(tokens_used or 0)
+            prev_tokens = state["codex_thread_tokens"].get(thread_id)
 
-    rows = list(reversed(rows)) if last_id == 0 else rows
+            if prev_tokens is None:
+                state["codex_thread_tokens"][thread_id] = tokens_used
+                continue
 
-    for row_id, ts, body in rows:
-        conversation_id = parse_kv(body, "conversation.id") or f"codex-{row_id}"
-        model = parse_kv(body, "model") or parse_kv(body, "slug") or "codex"
-        input_tokens = parse_int(body, "input_token_count")
-        output_tokens = parse_int(body, "output_token_count")
-        cache_read = parse_int(body, "cached_token_count")
-        context_size = max(input_tokens + output_tokens + cache_read, 1)
+            if tokens_used > prev_tokens:
+                diff = tokens_used - prev_tokens
+                state["codex_thread_tokens"][thread_id] = tokens_used
 
-        sent = post({
-            "agent": "codex",
-            "source": "codex",
-            "product": "codex",
-            "session_id": conversation_id,
-            "conversation_id": conversation_id,
-            "cwd": parse_kv(body, "cwd") or os.getcwd(),
-            "model": {"id": model, "display_name": model},
-            "agent_state": "idle",
-            "context_window": {
-                "total_input_tokens": input_tokens + cache_read,
-                "total_output_tokens": output_tokens,
-                "context_window_size": context_size,
-                "used_percentage": min(100, ((input_tokens + output_tokens) / context_size) * 100),
-                "current_usage": {
-                    "input_tokens": input_tokens,
-                    "output_tokens": output_tokens,
-                    "cache_read_input_tokens": cache_read,
+                post({
+                    "agent": "codex",
+                    "source": "codex",
+                    "product": "codex",
+                    "session_id": thread_id,
+                    "conversation_id": thread_id,
+                    "cwd": cwd or os.getcwd(),
+                    "model": {"id": model or "codex", "display_name": model or "codex"},
+                    "agent_state": "idle",
+                    "context_window": {
+                        "total_input_tokens": tokens_used,
+                        "total_output_tokens": 0,
+                        "context_window_size": max(tokens_used, 200000),
+                        "used_percentage": min(100, (tokens_used / max(tokens_used, 200000)) * 100),
+                        "current_usage": {
+                            "input_tokens": diff,
+                            "output_tokens": 0,
+                            "cache_read_input_tokens": 0
+                        }
+                    }
+                })
+
+    # 2. Poll from logs_2.sqlite (backward compatibility)
+    if os.path.exists(CODEX_DB):
+        last_id = int(state.get("codex_last_log_id") or 0)
+        query = """
+            select id, ts, feedback_log_body
+            from logs
+            where id > ?
+              and target = 'codex_otel.trace_safe'
+              and feedback_log_body like '%event.name="codex.sse_event"%'
+              and feedback_log_body like '%event.kind=response.completed%'
+              and feedback_log_body like '%input_token_count=%'
+            order by id asc
+            limit 20
+        """
+        first_run_query = """
+            select id, ts, feedback_log_body
+            from logs
+            where target = 'codex_otel.trace_safe'
+              and feedback_log_body like '%event.name="codex.sse_event"%'
+              and feedback_log_body like '%event.kind=response.completed%'
+              and feedback_log_body like '%input_token_count=%'
+            order by id desc
+            limit 1
+        """
+
+        try:
+            conn = sqlite3.connect(f"file:{CODEX_DB}?mode=ro", uri=True)
+            rows = conn.execute(first_run_query if last_id == 0 else query, () if last_id == 0 else (last_id,)).fetchall()
+            conn.close()
+        except Exception:
+            return
+
+        rows = list(reversed(rows)) if last_id == 0 else rows
+
+        for row_id, ts, body in rows:
+            conversation_id = parse_kv(body, "conversation.id") or f"codex-{row_id}"
+            model = parse_kv(body, "model") or parse_kv(body, "slug") or "codex"
+            input_tokens = parse_int(body, "input_token_count")
+            output_tokens = parse_int(body, "output_token_count")
+            cache_read = parse_int(body, "cached_token_count")
+            context_size = max(input_tokens + output_tokens + cache_read, 1)
+
+            sent = post({
+                "agent": "codex",
+                "source": "codex",
+                "product": "codex",
+                "session_id": conversation_id,
+                "conversation_id": conversation_id,
+                "cwd": parse_kv(body, "cwd") or os.getcwd(),
+                "model": {"id": model, "display_name": model},
+                "agent_state": "idle",
+                "context_window": {
+                    "total_input_tokens": input_tokens + cache_read,
+                    "total_output_tokens": output_tokens,
+                    "context_window_size": context_size,
+                    "used_percentage": min(100, ((input_tokens + output_tokens) / context_size) * 100),
+                    "current_usage": {
+                        "input_tokens": input_tokens,
+                        "output_tokens": output_tokens,
+                        "cache_read_input_tokens": cache_read,
+                    },
                 },
-            },
-        })
-        if sent:
-            state["codex_last_log_id"] = row_id
+            })
+            if sent:
+                state["codex_last_log_id"] = row_id
 
 
 def poll_opencode(state):
@@ -203,11 +249,90 @@ def poll_opencode(state):
             state["opencode_last_time"] = max(int(created), int(state.get("opencode_last_time") or 0))
 
 
+def poll_claude(state):
+    claude_dir = os.path.expanduser("~/.claude/projects")
+    if not os.path.exists(claude_dir):
+        return
+
+    offsets = state.setdefault("claude_file_offsets", {})
+
+    for root, dirs, files in os.walk(claude_dir):
+        for file in files:
+            if file.endswith(".jsonl"):
+                file_path = os.path.join(root, file)
+                try:
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        lines = [line.strip() for line in f if line.strip()]
+                    
+                    last_read = offsets.get(file_path, 0)
+                    if last_read == 0:
+                        offsets[file_path] = len(lines)
+                        # Process latest assistant response to establish state
+                        for line in reversed(lines):
+                            try:
+                                parsed = json.loads(line)
+                                if parsed.get("type") == "assistant" and parsed.get("message", {}).get("usage"):
+                                    process_claude_line(parsed)
+                                    break
+                            except Exception:
+                                pass
+                        continue
+
+                    for i in range(last_read, len(lines)):
+                        try:
+                            parsed = json.loads(lines[i])
+                            if parsed.get("type") == "assistant" and parsed.get("message", {}).get("usage"):
+                                process_claude_line(parsed)
+                        except Exception:
+                            pass
+                    offsets[file_path] = len(lines)
+                except Exception:
+                    pass
+
+
+def process_claude_line(parsed):
+    message = parsed.get("message") or {}
+    usage = message.get("usage") or {}
+    input_tokens = usage.get("input_tokens") or 0
+    output_tokens = usage.get("output_tokens") or 0
+    cache_read = usage.get("cache_read_input_tokens") or 0
+    total_tokens = input_tokens + output_tokens + cache_read
+    model = message.get("model") or "claude-3-5-sonnet"
+    session_id = parsed.get("sessionId") or "global"
+
+    agent_state = "idle"
+    if message.get("stop_reason") == "tool_use":
+        agent_state = "tool_use"
+
+    post({
+        "agent": "claudecode",
+        "source": "claudecode",
+        "product": "claudecode",
+        "session_id": session_id,
+        "conversation_id": session_id,
+        "cwd": parsed.get("cwd") or os.getcwd(),
+        "model": {"id": model, "display_name": model},
+        "agent_state": agent_state,
+        "context_window": {
+            "total_input_tokens": input_tokens + cache_read,
+            "total_output_tokens": output_tokens,
+            "context_window_size": max(total_tokens, 1),
+            "used_percentage": min(100, ((input_tokens + output_tokens) / max(total_tokens, 1)) * 100),
+            "current_usage": {
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "cache_read_input_tokens": cache_read,
+            },
+        },
+    })
+
+
 def main():
     while True:
         state = load_state()
         poll_codex(state)
         poll_opencode(state)
+        poll_claude(state)
         save_state(state)
         time.sleep(5)
 

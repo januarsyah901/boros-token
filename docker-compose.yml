@@ -13,3 +13,4 @@ services:
       # Mount CLI agent databases as read-only to /root
       - ~/.codex:/root/.codex:ro
       - ~/.local/share/opencode:/root/.local/share/opencode:ro
+      - ~/.claude:/root/.claude:ro

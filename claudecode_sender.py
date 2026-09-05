@@ -5,7 +5,7 @@ import threading
 import urllib.request
 
 SERVER_URL = "http://localhost:4000/api/metadata"
-SOURCE_NAME = "codex"
+SOURCE_NAME = "claudecode"
 
 
 def send_data(payload_str):

@@ -4,6 +4,15 @@ import os
 import json
 import urllib.request
 import threading
+import subprocess
+
+def trigger_notification(title, message):
+    try:
+        # AppleScript to trigger macOS native notification
+        apple_script = f'display notification "{message}" with title "{title}"'
+        subprocess.run(["osascript", "-e", apple_script], capture_output=True)
+    except Exception:
+        pass
 
 def send_data(payload_str):
     try:
@@ -31,6 +40,13 @@ def main():
             
             # Force all events to be tagged as Antigravity CLI.
             payload['product'] = 'terminal'
+            
+            # Check if agent is waiting for permission (state == 'reviewing')
+            if payload.get('agent_state') == 'reviewing':
+                # Run notification in background thread
+                t_notif = threading.Thread(target=trigger_notification, args=("Antigravity CLI", "Agy is waiting for permission request."))
+                t_notif.daemon = True
+                t_notif.start()
             
             # Serialize back to string
             updated_data = json.dumps(payload)

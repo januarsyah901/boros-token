@@ -2,6 +2,7 @@
 history_log.json
 *.log
 .boros_poller_state.json
+.menu_style
 
 # Node.js
 node_modules/

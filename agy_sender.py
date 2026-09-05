@@ -37,7 +37,7 @@ def main():
         t = threading.Thread(target=send_data, args=(updated_data,))
         t.daemon = True
         t.start()
-        t.join(timeout=0.05)
+        t.join(timeout=0.5)
     except Exception:
         pass
 

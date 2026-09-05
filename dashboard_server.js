@@ -6,6 +6,7 @@ const { execFile } = require('child_process');
 const PORT = 4000;
 const DB_FILE = path.join(__dirname, 'history_log.json');
 const CODEX_DB = path.join(process.env.HOME || '', '.codex', 'logs_2.sqlite');
+const CODEX_STATE_DB = path.join(process.env.HOME || '', '.codex', 'state_5.sqlite');
 const OPENCODE_DB = path.join(process.env.HOME || '', '.local', 'share', 'opencode', 'opencode.db');
 
 // Latest state keyed by source/session so multiple agents can coexist.
@@ -16,7 +17,9 @@ let history = [];
 const clients = [];
 const pollState = {
     codexLastLogId: 0,
-    opencodeLastTime: 0
+    opencodeLastTime: 0,
+    claudeFileOffsets: {},
+    codexThreadTokens: {}
 };
 
 // Load state from disk on startup
@@ -28,6 +31,15 @@ function loadStateFromDisk() {
             latestState = parsed.latestState || null;
             latestStates = parsed.latestStates || {};
             history = parsed.history || [];
+
+            // Downgrade stale working states (> 2 min old) to idle on startup
+            const now = Date.now();
+            Object.values(latestStates).forEach(s => {
+                if (s.agent_state === 'working' && (now - new Date(s._receivedAt || 0).getTime()) > 2 * 60 * 1000) {
+                    s.agent_state = 'idle';
+                }
+            });
+
             console.log(`[Dashboard Server] Loaded history from disk. Total events: ${history.length}`);
         }
     } catch (e) {
@@ -45,6 +57,8 @@ function getDisplaySource(source) {
         codex: 'Codex',
         opencode: 'OpenCode',
         agy: 'Agy',
+        claudecode: 'Claude Code',
+        claude: 'Claude Code',
         terminal: 'Antigravity CLI',
         antigravity: 'Antigravity',
         code: 'Antigravity IDE',
@@ -89,28 +103,27 @@ function saveStateToDisk() {
 loadStateFromDisk();
 
 // Compute the "best" latestState for display:
-// Pick the most recently received state that has meaningful tokens,
+// Pick the most recently received state that is actively working (received within 2 min),
 // OR the absolute most recent if all are idle.
 function computeBestState() {
     const all = Object.values(latestStates);
     if (all.length === 0) return latestState;
 
-    // Prefer states with agent_state=working
-    const working = all.filter(s => s.agent_state === 'working');
+    const now = Date.now();
+    const WORKING_TIMEOUT_MS = 2 * 60 * 1000;
+
+    // Prefer states actively working (received within 2 minutes)
+    const working = all.filter(s => {
+        if (s.agent_state !== 'working') return false;
+        const rec = new Date(s._receivedAt || 0).getTime();
+        return (now - rec) < WORKING_TIMEOUT_MS;
+    });
+
     if (working.length > 0) {
         return working.sort((a, b) => new Date(b._receivedAt) - new Date(a._receivedAt))[0];
     }
 
-    // Prefer states with current tokens > 0
-    const withTokens = all.filter(s => {
-        const cu = s.context_window?.current_usage;
-        return cu && (cu.input_tokens > 0 || cu.output_tokens > 0);
-    });
-    if (withTokens.length > 0) {
-        return withTokens.sort((a, b) => new Date(b._receivedAt) - new Date(a._receivedAt))[0];
-    }
-
-    // Fall back to most recently received
+    // Fall back to most recently received across all agents
     return all.sort((a, b) => new Date(b._receivedAt) - new Date(a._receivedAt))[0] || latestState;
 }
 
@@ -263,53 +276,110 @@ function parseIntKv(body, key) {
 }
 
 function pollCodex() {
-    const where = `
-        target = 'codex_otel.trace_safe'
-        and feedback_log_body like '%event.name="codex.sse_event"%'
-        and feedback_log_body like '%event.kind=response.completed%'
-        and feedback_log_body like '%input_token_count=%'
-    `;
-    const query = pollState.codexLastLogId > 0
-        ? `select id, ts, feedback_log_body from logs where id > ${pollState.codexLastLogId} and ${where} order by id asc limit 20`
-        : `select id, ts, feedback_log_body from logs where ${where} order by id desc limit 1`;
+    // 1. Poll from state_5.sqlite if exists (new Codex versions)
+    if (fs.existsSync(CODEX_STATE_DB)) {
+        const query = "select id, model, tokens_used, cwd from threads where tokens_used > 0";
+        sqliteJson(CODEX_STATE_DB, query, (err, rows) => {
+            if (err || !rows || !rows.length) return;
 
-    sqliteJson(CODEX_DB, query, (err, rows) => {
-        if (err || !rows.length) return;
-        if (pollState.codexLastLogId === 0) rows.reverse();
+            if (!pollState.codexThreadTokens) {
+                pollState.codexThreadTokens = {};
+            }
 
-        rows.forEach(row => {
-            const body = row.feedback_log_body || '';
-            const sessionId = parseKv(body, 'conversation.id') || `codex-${row.id}`;
-            const model = parseKv(body, 'model') || parseKv(body, 'slug') || 'codex';
-            const inputTokens = parseIntKv(body, 'input_token_count');
-            const outputTokens = parseIntKv(body, 'output_token_count');
-            const cacheRead = parseIntKv(body, 'cached_token_count');
-            const contextSize = Math.max(inputTokens + outputTokens + cacheRead, 1);
+            rows.forEach(row => {
+                const threadId = row.id;
+                const tokensUsed = parseInt(row.tokens_used) || 0;
+                const model = row.model || 'codex';
+                const cwd = row.cwd || __dirname;
 
-            processPayload({
-                agent: 'codex',
-                source: 'codex',
-                product: 'codex',
-                session_id: sessionId,
-                conversation_id: sessionId,
-                cwd: parseKv(body, 'cwd') || __dirname,
-                model: { id: model, display_name: model },
-                agent_state: 'idle',
-                context_window: {
-                    total_input_tokens: inputTokens + cacheRead,
-                    total_output_tokens: outputTokens,
-                    context_window_size: contextSize,
-                    used_percentage: Math.min(100, ((inputTokens + outputTokens) / contextSize) * 100),
-                    current_usage: {
-                        input_tokens: inputTokens,
-                        output_tokens: outputTokens,
-                        cache_read_input_tokens: cacheRead
-                    }
+                const prevTokens = pollState.codexThreadTokens[threadId];
+
+                if (prevTokens === undefined) {
+                    // Initialize on first see
+                    pollState.codexThreadTokens[threadId] = tokensUsed;
+                    return;
+                }
+
+                if (tokensUsed > prevTokens) {
+                    const diff = tokensUsed - prevTokens;
+                    pollState.codexThreadTokens[threadId] = tokensUsed;
+
+                    processPayload({
+                        agent: 'codex',
+                        source: 'codex',
+                        product: 'codex',
+                        session_id: threadId,
+                        conversation_id: threadId,
+                        cwd: cwd,
+                        model: { id: model, display_name: model },
+                        agent_state: 'idle',
+                        context_window: {
+                            total_input_tokens: tokensUsed,
+                            total_output_tokens: 0,
+                            context_window_size: Math.max(tokensUsed, 200000),
+                            used_percentage: Math.min(100, (tokensUsed / Math.max(tokensUsed, 200000)) * 100),
+                            current_usage: {
+                                input_tokens: diff,
+                                output_tokens: 0,
+                                cache_read_input_tokens: 0
+                            }
+                        }
+                    });
                 }
             });
-            pollState.codexLastLogId = Math.max(pollState.codexLastLogId, row.id);
         });
-    });
+    }
+
+    // 2. Poll from logs_2.sqlite (backward compatibility)
+    if (fs.existsSync(CODEX_DB)) {
+        const where = `
+            target = 'codex_otel.trace_safe'
+            and feedback_log_body like '%event.name="codex.sse_event"%'
+            and feedback_log_body like '%event.kind=response.completed%'
+            and feedback_log_body like '%input_token_count=%'
+        `;
+        const query = pollState.codexLastLogId > 0
+            ? `select id, ts, feedback_log_body from logs where id > ${pollState.codexLastLogId} and ${where} order by id asc limit 20`
+            : `select id, ts, feedback_log_body from logs where ${where} order by id desc limit 1`;
+
+        sqliteJson(CODEX_DB, query, (err, rows) => {
+            if (err || !rows.length) return;
+            if (pollState.codexLastLogId === 0) rows.reverse();
+
+            rows.forEach(row => {
+                const body = row.feedback_log_body || '';
+                const sessionId = parseKv(body, 'conversation.id') || `codex-${row.id}`;
+                const model = parseKv(body, 'model') || parseKv(body, 'slug') || 'codex';
+                const inputTokens = parseIntKv(body, 'input_token_count');
+                const outputTokens = parseIntKv(body, 'output_token_count');
+                const cacheRead = parseIntKv(body, 'cached_token_count');
+                const contextSize = Math.max(inputTokens + outputTokens + cacheRead, 1);
+
+                processPayload({
+                    agent: 'codex',
+                    source: 'codex',
+                    product: 'codex',
+                    session_id: sessionId,
+                    conversation_id: sessionId,
+                    cwd: parseKv(body, 'cwd') || __dirname,
+                    model: { id: model, display_name: model },
+                    agent_state: 'idle',
+                    context_window: {
+                        total_input_tokens: inputTokens + cacheRead,
+                        total_output_tokens: outputTokens,
+                        context_window_size: contextSize,
+                        used_percentage: Math.min(100, ((inputTokens + outputTokens) / contextSize) * 100),
+                        current_usage: {
+                            input_tokens: inputTokens,
+                            output_tokens: outputTokens,
+                            cache_read_input_tokens: cacheRead
+                        }
+                    }
+                });
+                pollState.codexLastLogId = Math.max(pollState.codexLastLogId, row.id);
+            });
+        });
+    }
 }
 
 function pollOpenCode() {
@@ -368,9 +438,105 @@ function pollOpenCode() {
     });
 }
 
+function pollClaude() {
+    const CLAUDE_DIR = path.join(process.env.HOME || '', '.claude', 'projects');
+    if (!fs.existsSync(CLAUDE_DIR)) return;
+
+    if (!pollState.claudeFileOffsets) {
+        pollState.claudeFileOffsets = {};
+    }
+
+    try {
+        const projects = fs.readdirSync(CLAUDE_DIR);
+        for (const project of projects) {
+            const projectPath = path.join(CLAUDE_DIR, project);
+            if (fs.statSync(projectPath).isDirectory()) {
+                const files = fs.readdirSync(projectPath);
+                for (const file of files) {
+                    if (file.endsWith('.jsonl')) {
+                        const filePath = path.join(projectPath, file);
+                        try {
+                            const content = fs.readFileSync(filePath, 'utf8');
+                            const lines = content.split('\n').filter(Boolean);
+                            const lastRead = pollState.claudeFileOffsets[filePath] || 0;
+
+                            if (lastRead === 0) {
+                                pollState.claudeFileOffsets[filePath] = lines.length;
+                                // Find the latest assistant line to establish initial state
+                                for (let i = lines.length - 1; i >= 0; i--) {
+                                    const parsed = JSON.parse(lines[i]);
+                                    if (parsed.type === 'assistant' && parsed.message?.usage) {
+                                        processClaudeLine(parsed);
+                                        break;
+                                    }
+                                }
+                                continue;
+                            }
+
+                            for (let i = lastRead; i < lines.length; i++) {
+                                try {
+                                    const parsed = JSON.parse(lines[i]);
+                                    if (parsed.type === 'assistant' && parsed.message?.usage) {
+                                        processClaudeLine(parsed);
+                                    }
+                                } catch (err) {
+                                    console.error('Error parsing Claude JSONL line:', err);
+                                }
+                            }
+                            pollState.claudeFileOffsets[filePath] = lines.length;
+                        } catch (e) {
+                            console.error(`Error polling Claude file ${filePath}:`, e);
+                        }
+                    }
+                }
+            }
+        }
+    } catch (e) {
+        console.error('Error scanning Claude projects dir:', e);
+    }
+}
+
+function processClaudeLine(parsed) {
+    const usage = parsed.message.usage || {};
+    const inputTokens = usage.input_tokens || 0;
+    const outputTokens = usage.output_tokens || 0;
+    const cacheRead = usage.cache_read_input_tokens || 0;
+    const totalTokens = inputTokens + outputTokens + cacheRead;
+    const model = parsed.message.model || 'claude-3-5-sonnet';
+    const sessionId = parsed.sessionId || 'global';
+    
+    let agentState = 'idle';
+    if (parsed.message.stop_reason === 'tool_use') {
+        agentState = 'tool_use';
+    }
+
+    processPayload({
+        agent: 'claudecode',
+        source: 'claudecode',
+        product: 'claudecode',
+        session_id: sessionId,
+        conversation_id: sessionId,
+        cwd: parsed.cwd || __dirname,
+        model: { id: model, display_name: model },
+        agent_state: agentState,
+        context_window: {
+            total_input_tokens: inputTokens + cacheRead,
+            total_output_tokens: outputTokens,
+            context_window_size: Math.max(totalTokens, 1),
+            used_percentage: Math.min(100, ((inputTokens + outputTokens) / Math.max(totalTokens, 1)) * 100),
+            current_usage: {
+                input_tokens: inputTokens,
+                output_tokens: outputTokens,
+                cache_read_input_tokens: cacheRead
+            }
+        }
+    });
+}
+
 function pollAgentDatabases() {
     pollCodex();
     pollOpenCode();
+    pollClaude();
 }
 
 const server = http.createServer((req, res) => {

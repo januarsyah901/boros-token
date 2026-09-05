@@ -37,7 +37,7 @@ You can monitor your agent token usage directly in your Mac's menu bar using [Sw
    ```bash
    ln -s /path/to/boros-token/agy_swiftbar.py ~/Library/Application\ Support/SwiftBar/Plugins/agy_swiftbar.5s.py
    ```
-4. SwiftBar will now display the latest token metrics (e.g., `BT Codex:1.2K/300`) directly in your menu bar. Clicking it exposes more details and a link to open the web dashboard.
+4. SwiftBar will now display the latest token metrics (e.g., `AGY ↑ 84k ↓ 30k`) directly in your menu bar with switchable UI styles (Style A dot or Style B badge). Clicking it exposes more details and a link to open the web dashboard.
 
 ---
 
@@ -83,6 +83,7 @@ Each agent sends a JSON payload to `stdin` of its respective sender script.
 cat payload.json | python3 codex_sender.py
 cat payload.json | python3 opencode_sender.py
 cat payload.json | python3 agy_sender.py
+cat payload.json | python3 claudecode_sender.py
 ```
 
 ### Convenient Shell Aliases:
@@ -91,6 +92,7 @@ Add the following to your `~/.zshrc` or `~/.bash_profile`:
 alias codex-token='python3 /path/to/boros-token/codex_sender.py'
 alias opencode-token='python3 /path/to/boros-token/opencode_sender.py'
 alias agy-token='python3 /path/to/boros-token/agy_sender.py'
+alias claudecode-token='python3 /path/to/boros-token/claudecode_sender.py'
 ```
 
 ---
@@ -115,6 +117,7 @@ Based on my preference, proceed with:
    - For Agy: `/absolute/path/to/boros-token/agy_sender.py`
    - For Codex: `/absolute/path/to/boros-token/codex_sender.py`
    - For OpenCode: `/absolute/path/to/boros-token/opencode_sender.py`
+   - For Claude Code: `/absolute/path/to/boros-token/claudecode_sender.py`
    (Be sure to replace `/absolute/path/to/boros-token` with the actual path where this project is located on my machine).
 5. If no built-in piping is available, wrap the terminal launch command for this agent so it intercepts stdout and routes it through the sender script.
 ```
