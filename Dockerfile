@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:22-alpine
 
 # Install sqlite CLI to run sqlite3 commands inside the container
 RUN apk add --no-cache sqlite
