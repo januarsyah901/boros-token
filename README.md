@@ -19,7 +19,7 @@
 - 📡 **Multi-Agent SSE Stream**: Live updates pushed instantly from Node.js server using Server-Sent Events.
 - 🔄 **Persistent Poller**: Automatically polls Codex, OpenCode, and Claude Code without duplicating events across restarts.
 - 🐳 **Docker Native**: Run seamlessly in containerized environments with a simple command.
-- 🍏 **Syrtis-Inspired macOS Menu Bar**: Monitor live status from your menu bar using SwiftBar with 4 switchable display modes, agent icons, and multi-agent glance.
+- 🍏 **macOS Menu Bar Integration**: View current token usage directly from your menu bar using SwiftBar with switchable UI styles (Style A dot or Style B badge).
 - 🛠️ **Full REST API**: Query health, pricing catalog, filtered history, and daily or model aggregations.
 
 ---
@@ -40,20 +40,11 @@ You can monitor your agent token usage directly in your Mac's menu bar using [Sw
    ```bash
    ln -s /path/to/boros-token/agy_swiftbar.py ~/Library/Application\ Support/SwiftBar/Plugins/agy_swiftbar.5s.py
    ```
-4. SwiftBar will now display the latest token metrics directly in your menu bar with 4 switchable UI styles:
-   - **Style A (Classic Dot + Tokens)**: `● ↑ 15k ↓ 2.5k (8.8%)`
-   - **Style B (Agent Badge + Tokens)**: `CLAUDE ↑ 15k ↓ 2.5k`
-   - **Style C (Cost Focus)**: `● $0.084 (17.5k)`
-   - **Style D (Quota Focus)**: `● 8.8% · $0.084`
+4. SwiftBar will now display the latest token metrics directly in your menu bar with switchable UI styles:
+   - **Style A**: Monokrom Dot + Arrows + Percentage (e.g. `● ↑ 15k ↓ 2.5k (8.8%)`)
+   - **Style B**: Identifier Badge + Arrows (e.g. `CLAUDE ↑ 15k ↓ 2.5k`)
 
-   Clicking the menu bar exposes a rich Syrtis-inspired popover:
-   - Active Agent & Model with genuine brandmark icons.
-   - Context window capacity gauge (`[■■■□□□□□□□□□] 8.8% used`).
-   - Detailed token counts and cache hit ratio.
-   - Estimated turn cost and today's total spend.
-   - Multi-agent active session list.
-   - Recent activity trace showing the last 5 turns.
-   - Quick one-click style switcher and direct link to the web dashboard.
+   Clicking the menu bar exposes dropdown details (agent, active model, token counts, context window gauge, style switcher, and link to open the web dashboard).
 
 ---
 
