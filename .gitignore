@@ -1,5 +1,7 @@
 # Logs & Runtime history
 history_log.json
+boros.db*
+.boros.pid
 *.log
 .boros_poller_state.json
 .menu_style

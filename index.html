@@ -861,31 +861,48 @@
         let activeTableMode = 'costs';  // 'costs' or 'tokens'
 
         // Pricing Rules (per 1,000,000 tokens)
-        const PRICING = {
-            'gemini-flash': { input: 0.075, output: 0.30 },
-            'gemini-pro': { input: 1.25, output: 5.00 },
-            'claude-sonnet': { input: 3.00, output: 15.00 },
-            'claude-opus': { input: 15.00, output: 75.00 },
-            'claude-haiku': { input: 0.80, output: 4.00 },
-            'gpt-oss': { input: 0.50, output: 1.50 },
-            'default': { input: 0.075, output: 0.30 }
+        let SERVER_PRICING = null;
+        fetch('/api/pricing')
+            .then(res => res.json())
+            .then(data => { SERVER_PRICING = data; })
+            .catch(() => {});
+
+        const DEFAULT_PRICING = {
+            'gemini-flash': { input: 0.15, output: 0.60, cache_read: 0.0375 },
+            'gemini-pro': { input: 1.25, output: 5.00, cache_read: 0.3125 },
+            'claude-sonnet': { input: 3.00, output: 15.00, cache_read: 0.30 },
+            'claude-opus': { input: 15.00, output: 75.00, cache_read: 1.50 },
+            'claude-haiku': { input: 0.80, output: 4.00, cache_read: 0.08 },
+            'grok': { input: 3.00, output: 15.00, cache_read: 0.75 },
+            'deepseek': { input: 0.14, output: 0.28, cache_read: 0.014 },
+            'gpt-4o': { input: 2.50, output: 10.00, cache_read: 1.25 },
+            'gpt-oss': { input: 0.50, output: 1.50, cache_read: 0.10 },
+            'default': { input: 0.15, output: 0.60, cache_read: 0.0375 }
         };
 
         function getPricingForModel(modelName) {
-            const name = (modelName || '').toLowerCase();
-            if (name.includes('opus')) return PRICING['claude-opus'];
-            if (name.includes('sonnet')) return PRICING['claude-sonnet'];
-            if (name.includes('haiku')) return PRICING['claude-haiku'];
-            if (name.includes('claude')) return PRICING['claude-sonnet'];
-            if (name.includes('gpt-oss') || name.includes('gpt')) return PRICING['gpt-oss'];
-            if (name.includes('pro')) return PRICING['gemini-pro'];
-            return PRICING['gemini-flash'];
+            const name = (modelName || '').toLowerCase().trim();
+            if (SERVER_PRICING && SERVER_PRICING[name]) {
+                return SERVER_PRICING[name];
+            }
+            if (name.includes('opus')) return DEFAULT_PRICING['claude-opus'];
+            if (name.includes('sonnet')) return DEFAULT_PRICING['claude-sonnet'];
+            if (name.includes('haiku')) return DEFAULT_PRICING['claude-haiku'];
+            if (name.includes('claude')) return DEFAULT_PRICING['claude-sonnet'];
+            if (name.includes('grok')) return DEFAULT_PRICING['grok'];
+            if (name.includes('deepseek')) return DEFAULT_PRICING['deepseek'];
+            if (name.includes('gpt-4o') || name.includes('gpt4o')) return DEFAULT_PRICING['gpt-4o'];
+            if (name.includes('gpt-oss') || name.includes('gpt') || name.includes('codex')) return DEFAULT_PRICING['gpt-oss'];
+            if (name.includes('pro')) return DEFAULT_PRICING['gemini-pro'];
+            return DEFAULT_PRICING['gemini-flash'];
         }
 
         function getProviderForModel(modelName) {
-            const name = (modelName || '').toLowerCase();
+            const name = (modelName || '').toLowerCase().trim();
             if (name.includes('claude') || name.includes('sonnet') || name.includes('opus') || name.includes('haiku')) return 'Anthropic';
-            if (name.includes('gpt')) return 'OpenAI';
+            if (name.includes('grok')) return 'xAI';
+            if (name.includes('deepseek')) return 'DeepSeek';
+            if (name.includes('gpt') || name.includes('codex') || name.includes('o1') || name.includes('o3')) return 'OpenAI';
             return 'Google';
         }
 

@@ -89,7 +89,7 @@ def main():
     
     # Fallback paths
     if not os.path.exists(history_path):
-        history_path = "/Users/mrfrog/Downloads/code/project/boros-token/history_log.json"
+        history_path = os.path.join(os.path.expanduser("~"), "Downloads/code/project/boros-token/history_log.json")
         
     db_sessions = {}
     if os.path.exists(history_path):
@@ -124,7 +124,7 @@ def main():
             print(f"Warning: Failed to load history_log.json: {e}")
 
     # Load agyhub summaries
-    pb_path = "/Users/mrfrog/.gemini/antigravity/agyhub_summaries_proto.pb"
+    pb_path = os.path.expanduser("~/.gemini/antigravity/agyhub_summaries_proto.pb")
     pb_summaries = load_pb_summaries(pb_path)
 
     # Known/hardcoded conversation names mapping
@@ -137,7 +137,7 @@ def main():
         "a5e90a8e-b59f-4a37-91bb-5bb0e8a97ec7": "TA"
     }
 
-    brain_dir = "/Users/mrfrog/.gemini/antigravity-cli/brain"
+    brain_dir = os.path.expanduser("~/.gemini/antigravity-cli/brain")
     results = []
     
     if os.path.exists(brain_dir):
@@ -175,7 +175,7 @@ def main():
                 
                 # Fallback to sqlite database files
                 if not name:
-                    db_path = f"/Users/mrfrog/.gemini/antigravity-cli/conversations/{cid}.db"
+                    db_path = os.path.expanduser(f"~/.gemini/antigravity-cli/conversations/{cid}.db")
                     if os.path.exists(db_path):
                         try:
                             conn = sqlite3.connect(db_path)

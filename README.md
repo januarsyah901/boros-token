@@ -13,11 +13,14 @@
 ## Features
 
 - 📊 **Real-time Metrics**: View accumulated token consumption (Input, Output, Cache) and estimated costs.
+- 💾 **SQLite Persistence**: Powered by built-in `node:sqlite` (`boros.db`) replacing in-memory limits. Stores complete historical logs with indexed queries.
+- 💵 **Centralized Pricing Registry**: Standardized token rates per 1M tokens across Anthropic, OpenAI, Google, xAI Grok, and DeepSeek with cache read discounts.
 - 📈 **Trend Graphs**: Interactive charts showing token usage trends over time via Chart.js.
 - 📡 **Multi-Agent SSE Stream**: Live updates pushed instantly from Node.js server using Server-Sent Events.
-- 🔄 **Auto-Polling**: Automatically parses SQLite logs of Codex and OpenCode locally.
+- 🔄 **Persistent Poller**: Automatically polls Codex, OpenCode, and Claude Code without duplicating events across restarts.
 - 🐳 **Docker Native**: Run seamlessly in containerized environments with a simple command.
-- 🍏 **macOS Menu Bar Integration**: View current token usage directly from your menu bar using SwiftBar.
+- 🍏 **Syrtis-Inspired macOS Menu Bar**: Monitor live status from your menu bar using SwiftBar with 4 switchable display modes, agent icons, and multi-agent glance.
+- 🛠️ **Full REST API**: Query health, pricing catalog, filtered history, and daily or model aggregations.
 
 ---
 
@@ -37,7 +40,20 @@ You can monitor your agent token usage directly in your Mac's menu bar using [Sw
    ```bash
    ln -s /path/to/boros-token/agy_swiftbar.py ~/Library/Application\ Support/SwiftBar/Plugins/agy_swiftbar.5s.py
    ```
-4. SwiftBar will now display the latest token metrics (e.g., `AGY ↑ 84k ↓ 30k`) directly in your menu bar with switchable UI styles (Style A dot or Style B badge). Clicking it exposes more details and a link to open the web dashboard.
+4. SwiftBar will now display the latest token metrics directly in your menu bar with 4 switchable UI styles:
+   - **Style A (Classic Dot + Tokens)**: `● ↑ 15k ↓ 2.5k (8.8%)`
+   - **Style B (Agent Badge + Tokens)**: `CLAUDE ↑ 15k ↓ 2.5k`
+   - **Style C (Cost Focus)**: `● $0.084 (17.5k)`
+   - **Style D (Quota Focus)**: `● 8.8% · $0.084`
+
+   Clicking the menu bar exposes a rich Syrtis-inspired popover:
+   - Active Agent & Model with genuine brandmark icons.
+   - Context window capacity gauge (`[■■■□□□□□□□□□] 8.8% used`).
+   - Detailed token counts and cache hit ratio.
+   - Estimated turn cost and today's total spend.
+   - Multi-agent active session list.
+   - Recent activity trace showing the last 5 turns.
+   - Quick one-click style switcher and direct link to the web dashboard.
 
 ---
 
@@ -94,6 +110,24 @@ alias opencode-token='python3 /path/to/boros-token/opencode_sender.py'
 alias agy-token='python3 /path/to/boros-token/agy_sender.py'
 alias claudecode-token='python3 /path/to/boros-token/claudecode_sender.py'
 ```
+
+---
+
+## REST API Reference
+
+The server exposes the following endpoints on port `4000`:
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/` | Web dashboard single-page interface |
+| `GET` | `/api/health` | Service health status, uptime, and total recorded event count |
+| `GET` | `/api/pricing` | Model pricing catalog with rates per 1M tokens |
+| `GET` | `/api/state` | Current snapshot of active sessions and recent history |
+| `GET` | `/api/stream` | Server-Sent Events (SSE) live telemetry stream |
+| `GET` | `/api/history` | Query historical events from SQLite with filters (`agent`, `from`, `to`, `limit`, `offset`) |
+| `GET` | `/api/stats/daily` | Aggregated daily token and cost summaries (`?days=30`) |
+| `GET` | `/api/stats/models` | Aggregated metrics broken down by model and source |
+| `POST` | `/api/metadata` | Ingest agent telemetry payloads |
 
 ---
 

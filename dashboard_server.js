@@ -2,8 +2,10 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { execFile } = require('child_process');
+const { dbInstance } = require('./db');
+const { PRICING_TABLE, resolvePricing, calculateCost } = require('./pricing_registry');
 
-const PORT = 4000;
+const PORT = process.env.BOROS_PORT || 4000;
 const DB_FILE = path.join(__dirname, 'history_log.json');
 const CODEX_DB = path.join(process.env.HOME || '', '.codex', 'logs_2.sqlite');
 const CODEX_STATE_DB = path.join(process.env.HOME || '', '.codex', 'state_5.sqlite');
@@ -22,10 +24,13 @@ const pollState = {
     codexThreadTokens: {}
 };
 
-// Load state from disk on startup
+// Load state from disk and SQLite on startup
 function loadStateFromDisk() {
     try {
+        // 1. Initial migration to SQLite if needed
         if (fs.existsSync(DB_FILE)) {
+            dbInstance.migrateFromHistoryJson(DB_FILE);
+
             const raw = fs.readFileSync(DB_FILE, 'utf8');
             const parsed = JSON.parse(raw);
             latestState = parsed.latestState || null;
@@ -40,7 +45,26 @@ function loadStateFromDisk() {
                 }
             });
 
-            console.log(`[Dashboard Server] Loaded history from disk. Total events: ${history.length}`);
+            console.log(`[Dashboard Server] Loaded history from disk. In-memory events: ${history.length}, SQLite events: ${dbInstance.getTotalEventCount()}`);
+        }
+
+        // 2. Restore persistent pollState from SQLite
+        const savedPoll = dbInstance.loadPollState('agent_poll_state', null);
+        if (savedPoll) {
+            if (savedPoll.codexLastLogId) pollState.codexLastLogId = savedPoll.codexLastLogId;
+            if (savedPoll.opencodeLastTime) pollState.opencodeLastTime = savedPoll.opencodeLastTime;
+            if (savedPoll.claudeFileOffsets) pollState.claudeFileOffsets = savedPoll.claudeFileOffsets;
+            if (savedPoll.codexThreadTokens) pollState.codexThreadTokens = savedPoll.codexThreadTokens;
+            console.log('[Dashboard Server] Restored persistent poller state from database.');
+        }
+
+        // 3. Fallback active sessions from SQLite if empty
+        if (Object.keys(latestStates).length === 0) {
+            const dbSessions = dbInstance.loadActiveSessions();
+            if (Object.keys(dbSessions).length > 0) {
+                latestStates = dbSessions;
+                console.log(`[Dashboard Server] Restored ${Object.keys(latestStates).length} active sessions from database.`);
+            }
         }
     } catch (e) {
         console.error('Error loading history from disk:', e);
@@ -77,6 +101,18 @@ function processPayload(payload) {
     const sessionKey = `${source}:${payload.session_id || payload.conversation_id || 'global'}`;
     latestStates[sessionKey] = payload;
     latestState = payload;
+
+    // Persist active session in database
+    const modelName = payload.model?.display_name || payload.model?.id || 'Unknown Model';
+    dbInstance.saveActiveSession(
+        sessionKey,
+        payload.agent,
+        source,
+        payload.session_id || payload.conversation_id || 'global',
+        payload.agent_state || 'idle',
+        modelName,
+        payload
+    );
 
     addToHistory(payload);
     saveStateToDisk();
@@ -149,9 +185,9 @@ function broadcast() {
 //  - Match by source + session_id to prevent cross-agent phantom entries
 //  - If state is 'working': UPDATE the session's most recent event in place
 //  - If transitioned from 'working' to done: UPDATE to finalize
-//  - If idle→idle with no token change for same session: skip
-//  - Extra: if idle and exact same tokens exist in history (stale reconnect): update in-place
-//  - Otherwise: push new event
+//  - If idle->idle with no token change for same session: skip
+//  - Extra: if idle and exact same tokens exist in history: update in-place
+//  - Otherwise: push new event and insert into SQLite
 function addToHistory(state) {
     if (!state || !state.context_window) return;
 
@@ -166,6 +202,8 @@ function addToHistory(state) {
     const totalOutput = state.context_window.total_output_tokens || 0;
     const sessionId = state.session_id || state.conversation_id || null;
 
+    const costDetails = calculateCost(modelName, currentInput, currentOutput, currentCacheRead);
+
     const event = {
         timestamp,
         cwd: state.cwd || 'Global',
@@ -177,11 +215,11 @@ function addToHistory(state) {
         current_output: currentOutput,
         current_cache_read: currentCacheRead,
         model: modelName,
-        state: agentState
+        state: agentState,
+        cost: costDetails.totalCost
     };
 
     // --- Session-aware matching ---
-    // Priority 1: Match by source + session_id (prevents cross-agent phantom entries)
     let lastIdx = -1;
     if (sessionId) {
         for (let i = history.length - 1; i >= 0; i--) {
@@ -192,7 +230,6 @@ function addToHistory(state) {
         }
     }
 
-    // Priority 2: No session_id → fallback to product match for legacy events.
     if (lastIdx === -1 && !sessionId) {
         for (let i = history.length - 1; i >= 0; i--) {
             if ((history[i].source || history[i].product) === source && !history[i].session_id) {
@@ -205,9 +242,7 @@ function addToHistory(state) {
     const lastEvent = lastIdx >= 0 ? history[lastIdx] : null;
 
     if (!lastEvent) {
-        // First event for this session.
-        // Extra guard: if idle and exact same token fingerprint already exists,
-        // it's a stale session re-sending old data → update in-place, don't push new entry.
+        // First event for this session
         if (agentState !== 'working' && agentState !== 'tool_use') {
             for (let i = history.length - 1; i >= 0; i--) {
                 if ((history[i].source || history[i].product) === source &&
@@ -215,13 +250,13 @@ function addToHistory(state) {
                     history[i].current_output === currentOutput &&
                     history[i].total_input === totalInput &&
                     history[i].total_output === totalOutput) {
-                    // Stale duplicate detected — update existing entry in place
                     history[i] = event;
                     return;
                 }
             }
         }
         history.push(event);
+        dbInstance.insertEvent(event);
     } else {
         const tokensChanged = Math.abs(lastEvent.current_input - currentInput) > 50 ||
                               Math.abs(lastEvent.current_output - currentOutput) > 50;
@@ -232,15 +267,19 @@ function addToHistory(state) {
         if (wasWorking || isWorking) {
             // Update the existing slot (streaming update or finalize)
             history[lastIdx] = event;
+            if (!isWorking && wasWorking) {
+                // Finalized turn: record to SQLite
+                dbInstance.insertEvent(event);
+            }
         } else if (tokensChanged || totalChanged) {
             // Push new entry when tokens meaningfully changed
             history.push(event);
+            dbInstance.insertEvent(event);
         }
-        // else: skip (idle with no change)
     }
 
-    // Keep history capped at 100 entries
-    if (history.length > 100) history.shift();
+    // Keep in-memory history window at 500 entries (SQLite preserves full history)
+    if (history.length > 500) history.shift();
 }
 
 function sqliteJson(dbPath, query, cb) {
@@ -248,6 +287,7 @@ function sqliteJson(dbPath, query, cb) {
         cb(null, []);
         return;
     }
+
     execFile('sqlite3', ['-json', dbPath, query], { timeout: 10000, maxBuffer: 1024 * 1024 * 8 }, (err, stdout) => {
         if (err) {
             cb(err);
@@ -295,7 +335,6 @@ function pollCodex() {
                 const prevTokens = pollState.codexThreadTokens[threadId];
 
                 if (prevTokens === undefined) {
-                    // Initialize on first see
                     pollState.codexThreadTokens[threadId] = tokensUsed;
                     return;
                 }
@@ -343,7 +382,7 @@ function pollCodex() {
             : `select id, ts, feedback_log_body from logs where ${where} order by id desc limit 1`;
 
         sqliteJson(CODEX_DB, query, (err, rows) => {
-            if (err || !rows.length) return;
+            if (err || !rows || !rows.length) return;
             if (pollState.codexLastLogId === 0) rows.reverse();
 
             rows.forEach(row => {
@@ -393,7 +432,7 @@ function pollOpenCode() {
         : `select m.id, m.session_id, m.time_created, m.data, s.directory from message m left join session s on s.id = m.session_id where ${where} order by m.time_created desc limit 1`;
 
     sqliteJson(OPENCODE_DB, query, (err, rows) => {
-        if (err || !rows.length) return;
+        if (err || !rows || !rows.length) return;
         if (pollState.opencodeLastTime === 0) rows.reverse();
 
         rows.forEach(row => {
@@ -462,7 +501,6 @@ function pollClaude() {
 
                             if (lastRead === 0) {
                                 pollState.claudeFileOffsets[filePath] = lines.length;
-                                // Find the latest assistant line to establish initial state
                                 for (let i = lines.length - 1; i >= 0; i--) {
                                     const parsed = JSON.parse(lines[i]);
                                     if (parsed.type === 'assistant' && parsed.message?.usage) {
@@ -504,7 +542,7 @@ function processClaudeLine(parsed) {
     const totalTokens = inputTokens + outputTokens + cacheRead;
     const model = parsed.message.model || 'claude-3-5-sonnet';
     const sessionId = parsed.sessionId || 'global';
-    
+
     let agentState = 'idle';
     if (parsed.message.stop_reason === 'tool_use') {
         agentState = 'tool_use';
@@ -537,6 +575,9 @@ function pollAgentDatabases() {
     pollCodex();
     pollOpenCode();
     pollClaude();
+
+    // Persist poller offsets to database after polling cycle
+    dbInstance.savePollState('agent_poll_state', pollState);
 }
 
 const server = http.createServer((req, res) => {
@@ -550,9 +591,10 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    const parsedUrl = req.url.split('?')[0];
+    const [pathname, search] = req.url.split('?');
+    const queryParams = new URLSearchParams(search || '');
 
-    if (req.method === 'GET' && parsedUrl === '/') {
+    if (req.method === 'GET' && pathname === '/') {
         fs.readFile(path.join(__dirname, 'index.html'), 'utf8', (err, html) => {
             if (err) {
                 res.writeHead(500, { 'Content-Type': 'text/plain' });
@@ -563,7 +605,7 @@ const server = http.createServer((req, res) => {
             res.end(html);
         });
     }
-    else if (req.method === 'GET' && (parsedUrl === '/favicon.png' || parsedUrl === '/favicon.ico')) {
+    else if (req.method === 'GET' && (pathname === '/favicon.png' || pathname === '/favicon.ico')) {
         fs.readFile(path.join(__dirname, 'favicon.png'), (err, content) => {
             if (err) {
                 res.writeHead(404, { 'Content-Type': 'text/plain' });
@@ -574,7 +616,48 @@ const server = http.createServer((req, res) => {
             res.end(content);
         });
     }
-    else if (req.method === 'POST' && parsedUrl === '/api/metadata') {
+    else if (req.method === 'GET' && pathname === '/api/health') {
+        const payload = {
+            status: 'ok',
+            uptime: Math.round(process.uptime()),
+            eventsCount: dbInstance.getTotalEventCount(),
+            clientsConnected: clients.length,
+            timestamp: new Date().toISOString()
+        };
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(payload));
+    }
+    else if (req.method === 'GET' && pathname === '/api/pricing') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(PRICING_TABLE));
+    }
+    else if (req.method === 'GET' && pathname === '/api/stats/daily') {
+        const days = parseInt(queryParams.get('days') || '30', 10);
+        const stats = dbInstance.getDailyStats(days);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(stats));
+    }
+    else if (req.method === 'GET' && pathname === '/api/stats/models') {
+        const stats = dbInstance.getModelStats();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(stats));
+    }
+    else if (req.method === 'GET' && pathname === '/api/history') {
+        const agent = queryParams.get('agent');
+        const from = queryParams.get('from');
+        const to = queryParams.get('to');
+        const limit = parseInt(queryParams.get('limit') || '100', 10);
+        const offset = parseInt(queryParams.get('offset') || '0', 10);
+
+        const events = dbInstance.getFilteredEvents({ agent, from, to, limit, offset });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+            total: dbInstance.getTotalEventCount(),
+            count: events.length,
+            events
+        }));
+    }
+    else if (req.method === 'POST' && pathname === '/api/metadata') {
         let body = '';
         req.on('data', chunk => { body += chunk; });
         req.on('end', () => {
@@ -590,7 +673,7 @@ const server = http.createServer((req, res) => {
             }
         });
     }
-    else if (req.method === 'GET' && parsedUrl === '/api/stream') {
+    else if (req.method === 'GET' && pathname === '/api/stream') {
         res.writeHead(200, {
             'Content-Type': 'text/event-stream',
             'Cache-Control': 'no-cache',
@@ -620,7 +703,7 @@ const server = http.createServer((req, res) => {
             if (index !== -1) clients.splice(index, 1);
         });
     }
-    else if (req.method === 'GET' && parsedUrl === '/api/state') {
+    else if (req.method === 'GET' && pathname === '/api/state') {
         const best = computeBestState();
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ latestState: best, latestStates, history }));
@@ -633,7 +716,7 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, () => {
     console.log(`[Dashboard Server] Running at http://localhost:${PORT}`);
-    console.log(`[Dashboard Server] ${history.length} history events loaded.`);
+    console.log(`[Dashboard Server] ${history.length} in-memory events loaded.`);
     pollAgentDatabases();
     setInterval(pollAgentDatabases, 5000);
 });
