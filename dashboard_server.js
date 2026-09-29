@@ -21,7 +21,8 @@ const pollState = {
     codexLastLogId: 0,
     opencodeLastTime: 0,
     claudeFileOffsets: {},
-    codexThreadTokens: {}
+    codexThreadTokens: {},
+    antigravityLastMtime: 0
 };
 
 // Load state from disk and SQLite on startup
@@ -55,6 +56,7 @@ function loadStateFromDisk() {
             if (savedPoll.opencodeLastTime) pollState.opencodeLastTime = savedPoll.opencodeLastTime;
             if (savedPoll.claudeFileOffsets) pollState.claudeFileOffsets = savedPoll.claudeFileOffsets;
             if (savedPoll.codexThreadTokens) pollState.codexThreadTokens = savedPoll.codexThreadTokens;
+            if (savedPoll.antigravityLastMtime) pollState.antigravityLastMtime = savedPoll.antigravityLastMtime;
             console.log('[Dashboard Server] Restored persistent poller state from database.');
         }
 
@@ -571,10 +573,34 @@ function processClaudeLine(parsed) {
     });
 }
 
+function pollAntigravity() {
+    const AGY_STATUS_FILE = path.join(process.env.HOME || '', '.gemini', 'antigravity-cli', 'agy_status.json');
+    if (!fs.existsSync(AGY_STATUS_FILE)) return;
+
+    try {
+        const stats = fs.statSync(AGY_STATUS_FILE);
+        const lastMtime = pollState.antigravityLastMtime || 0;
+        if (stats.mtimeMs > lastMtime) {
+            pollState.antigravityLastMtime = stats.mtimeMs;
+            const content = fs.readFileSync(AGY_STATUS_FILE, 'utf8');
+            if (content.trim()) {
+                const payload = JSON.parse(content);
+                payload.agent = payload.agent || 'antigravity';
+                payload.source = payload.source || 'antigravity';
+                payload.product = payload.product || 'terminal';
+                processPayload(payload);
+            }
+        }
+    } catch (e) {
+        // Ignore read errors from concurrent writes
+    }
+}
+
 function pollAgentDatabases() {
     pollCodex();
     pollOpenCode();
     pollClaude();
+    pollAntigravity();
 
     // Persist poller offsets to database after polling cycle
     dbInstance.savePollState('agent_poll_state', pollState);
