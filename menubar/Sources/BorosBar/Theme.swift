@@ -1,11 +1,20 @@
 import SwiftUI
+import AppKit
 
 enum Theme {
     /// Only two accents: orange (input) / red (output), both readable on light and dark menus. Everything else uses .primary / .secondary.
     static let input  = Color(red: 1.00, green: 0.60, blue: 0.10)
     static let output = Color(red: 0.95, green: 0.27, blue: 0.30)
     static let menuWidth: CGFloat = 288
-    static let statusWidth: CGFloat = 124
+    /// Fixed width sized to the widest possible content ("↑ 999k ↓ 999k") + 6 pt padding per side,
+    /// so it sits like other menu bar items and never jitters when digits change.
+    static let statusWidth: CGFloat = {
+        func w(_ s: String) -> CGFloat {
+            let f = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .medium)
+            return ceil((s as NSString).size(withAttributes: [.font: f]).width)
+        }
+        return w("↑") + w("999k") + w("↓") + w("999k") + 3 * 3 + 12
+    }()
 }
 
 enum Fmt {
