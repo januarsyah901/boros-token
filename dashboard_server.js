@@ -22,7 +22,9 @@ const pollState = {
     opencodeLastTime: 0,
     claudeFileOffsets: {},
     codexThreadTokens: {},
-    antigravityLastMtime: 0
+    antigravityLastMtime: 0,
+    grokLastLine: 0,
+    grokSessionTokens: {}
 };
 
 // Load state from disk and SQLite on startup
@@ -57,6 +59,8 @@ function loadStateFromDisk() {
             if (savedPoll.claudeFileOffsets) pollState.claudeFileOffsets = savedPoll.claudeFileOffsets;
             if (savedPoll.codexThreadTokens) pollState.codexThreadTokens = savedPoll.codexThreadTokens;
             if (savedPoll.antigravityLastMtime) pollState.antigravityLastMtime = savedPoll.antigravityLastMtime;
+            if (savedPoll.grokLastLine) pollState.grokLastLine = savedPoll.grokLastLine;
+            if (savedPoll.grokSessionTokens) pollState.grokSessionTokens = savedPoll.grokSessionTokens;
             console.log('[Dashboard Server] Restored persistent poller state from database.');
         }
 
@@ -85,6 +89,7 @@ function getDisplaySource(source) {
         agy: 'Agy',
         claudecode: 'Claude Code',
         claude: 'Claude Code',
+        grok: 'Grok',
         terminal: 'Antigravity CLI',
         antigravity: 'Antigravity',
         code: 'Antigravity IDE',
@@ -596,11 +601,127 @@ function pollAntigravity() {
     }
 }
 
+function getGrokSessionInfo(sessionId) {
+    if (!sessionId) return { cwd: process.cwd(), model: 'grok-4' };
+    const sessionsDir = path.join(process.env.HOME || '', '.grok', 'sessions');
+    if (!fs.existsSync(sessionsDir)) return { cwd: process.cwd(), model: 'grok-4' };
+
+    try {
+        const entries = fs.readdirSync(sessionsDir);
+        for (const entry of entries) {
+            const summaryFile = path.join(sessionsDir, entry, sessionId, 'summary.json');
+            if (fs.existsSync(summaryFile)) {
+                const data = JSON.parse(fs.readFileSync(summaryFile, 'utf8'));
+                return {
+                    cwd: data.info?.cwd || process.cwd(),
+                    model: data.current_model_id || 'grok-4'
+                };
+            }
+        }
+    } catch (e) {
+        // Ignore read errors
+    }
+    return { cwd: process.cwd(), model: 'grok-4' };
+}
+
+function pollGrok() {
+    const GROK_LOG = path.join(process.env.HOME || '', '.grok', 'logs', 'unified.jsonl');
+    if (!fs.existsSync(GROK_LOG)) return;
+
+    if (!pollState.grokSessionTokens) {
+        pollState.grokSessionTokens = {};
+    }
+
+    try {
+        const content = fs.readFileSync(GROK_LOG, 'utf8');
+        const lines = content.split('\n').filter(Boolean);
+        const lastRead = pollState.grokLastLine || 0;
+
+        if (lastRead === 0) {
+            pollState.grokLastLine = lines.length;
+            // Scan backwards to find the most recent inference done event
+            for (let i = lines.length - 1; i >= 0; i--) {
+                try {
+                    const parsed = JSON.parse(lines[i]);
+                    if (parsed.msg === 'shell.turn.inference_done') {
+                        processGrokEvent(parsed, true);
+                        break;
+                    }
+                } catch (err) {}
+            }
+            return;
+        }
+
+        for (let i = lastRead; i < lines.length; i++) {
+            try {
+                const parsed = JSON.parse(lines[i]);
+                if (parsed.msg === 'shell.turn.inference_done') {
+                    processGrokEvent(parsed, false);
+                }
+            } catch (err) {
+                console.error('Error parsing Grok JSONL line:', err);
+            }
+        }
+        pollState.grokLastLine = lines.length;
+    } catch (e) {
+        console.error('Error polling Grok log file:', e);
+    }
+}
+
+function processGrokEvent(parsed, isInitial) {
+    const sid = parsed.sid || 'global';
+    const ctx = parsed.ctx || {};
+    const promptTokens = Number(ctx.prompt_tokens) || 0;
+    const cachedTokens = Number(ctx.cached_prompt_tokens) || 0;
+    const completionTokens = Number(ctx.completion_tokens) || 0;
+    const nonCachedInput = Math.max(0, promptTokens - cachedTokens);
+
+    const prev = pollState.grokSessionTokens[sid] || { prompt: 0, cached: 0, completion: 0 };
+    const prevNonCached = Math.max(0, prev.prompt - prev.cached);
+
+    const diffInput = isInitial ? nonCachedInput : Math.max(0, nonCachedInput - prevNonCached);
+    const diffOutput = isInitial ? completionTokens : Math.max(0, completionTokens - prev.completion);
+    const diffCache = isInitial ? cachedTokens : Math.max(0, cachedTokens - prev.cached);
+
+    pollState.grokSessionTokens[sid] = {
+        prompt: promptTokens,
+        cached: cachedTokens,
+        completion: completionTokens
+    };
+
+    const sessionInfo = getGrokSessionInfo(sid);
+    const totalTokens = promptTokens + completionTokens;
+    const contextLimit = 131072; // Standard Grok context window
+
+    processPayload({
+        agent: 'grok',
+        source: 'grok',
+        product: 'grok',
+        session_id: sid,
+        conversation_id: sid,
+        cwd: sessionInfo.cwd,
+        model: { id: sessionInfo.model, display_name: sessionInfo.model },
+        agent_state: 'idle',
+        context_window: {
+            total_input_tokens: promptTokens,
+            total_output_tokens: completionTokens,
+            context_window_size: Math.max(totalTokens, contextLimit),
+            used_percentage: Math.min(100, (totalTokens / Math.max(totalTokens, contextLimit)) * 100),
+            current_usage: {
+                input_tokens: diffInput,
+                output_tokens: diffOutput,
+                cache_read_input_tokens: diffCache
+            }
+        }
+    });
+}
+
 function pollAgentDatabases() {
     pollCodex();
     pollOpenCode();
     pollClaude();
     pollAntigravity();
+    pollGrok();
 
     // Persist poller offsets to database after polling cycle
     dbInstance.savePollState('agent_poll_state', pollState);

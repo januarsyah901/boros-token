@@ -12,6 +12,7 @@ SERVER_URL = "http://localhost:4000/api/metadata"
 CODEX_DB = os.path.expanduser("~/.codex/logs_2.sqlite")
 CODEX_STATE_DB = os.path.expanduser("~/.codex/state_5.sqlite")
 OPENCODE_DB = os.path.expanduser("~/.local/share/opencode/opencode.db")
+GROK_LOG = os.path.expanduser("~/.grok/logs/unified.jsonl")
 
 
 def load_state():
@@ -327,12 +328,118 @@ def process_claude_line(parsed):
     })
 
 
+def get_grok_session_info(session_id):
+    if not session_id:
+        return {"cwd": os.getcwd(), "model": "grok-4"}
+    sessions_dir = os.path.expanduser("~/.grok/sessions")
+    if not os.path.exists(sessions_dir):
+        return {"cwd": os.getcwd(), "model": "grok-4"}
+
+    try:
+        for entry in os.listdir(sessions_dir):
+            summary_file = os.path.join(sessions_dir, entry, session_id, "summary.json")
+            if os.path.exists(summary_file):
+                with open(summary_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    return {
+                        "cwd": data.get("info", {}).get("cwd") or os.getcwd(),
+                        "model": data.get("current_model_id") or "grok-4",
+                    }
+    except Exception:
+        pass
+    return {"cwd": os.getcwd(), "model": "grok-4"}
+
+
+def poll_grok(state):
+    if not os.path.exists(GROK_LOG):
+        return
+
+    session_tokens = state.setdefault("grok_session_tokens", {})
+    last_read = int(state.get("grok_last_line") or 0)
+
+    try:
+        with open(GROK_LOG, "r", encoding="utf-8") as f:
+            lines = [line.strip() for line in f if line.strip()]
+
+        if last_read == 0:
+            state["grok_last_line"] = len(lines)
+            for line in reversed(lines):
+                try:
+                    parsed = json.loads(line)
+                    if parsed.get("msg") == "shell.turn.inference_done":
+                        process_grok_event(parsed, session_tokens, is_initial=True)
+                        break
+                except Exception:
+                    pass
+            return
+
+        for i in range(last_read, len(lines)):
+            try:
+                parsed = json.loads(lines[i])
+                if parsed.get("msg") == "shell.turn.inference_done":
+                    process_grok_event(parsed, session_tokens, is_initial=False)
+            except Exception:
+                pass
+        state["grok_last_line"] = len(lines)
+    except Exception:
+        pass
+
+
+def process_grok_event(parsed, session_tokens, is_initial=False):
+    sid = parsed.get("sid") or "global"
+    ctx = parsed.get("ctx") or {}
+    prompt_tokens = int(ctx.get("prompt_tokens") or 0)
+    cached_tokens = int(ctx.get("cached_prompt_tokens") or 0)
+    completion_tokens = int(ctx.get("completion_tokens") or 0)
+    non_cached_input = max(0, prompt_tokens - cached_tokens)
+
+    prev = session_tokens.get(sid, {"prompt": 0, "cached": 0, "completion": 0})
+    prev_non_cached = max(0, prev["prompt"] - prev["cached"])
+
+    diff_input = non_cached_input if is_initial else max(0, non_cached_input - prev_non_cached)
+    diff_output = completion_tokens if is_initial else max(0, completion_tokens - prev["completion"])
+    diff_cache = cached_tokens if is_initial else max(0, cached_tokens - prev["cached"])
+
+    session_tokens[sid] = {
+        "prompt": prompt_tokens,
+        "cached": cached_tokens,
+        "completion": completion_tokens,
+    }
+
+    session_info = get_grok_session_info(sid)
+    total_tokens = prompt_tokens + completion_tokens
+    context_limit = 131072
+
+    post({
+        "agent": "grok",
+        "source": "grok",
+        "product": "grok",
+        "session_id": sid,
+        "conversation_id": sid,
+        "cwd": session_info["cwd"],
+        "model": {"id": session_info["model"], "display_name": session_info["model"]},
+        "agent_state": "idle",
+        "context_window": {
+            "total_input_tokens": prompt_tokens,
+            "total_output_tokens": completion_tokens,
+            "context_window_size": max(total_tokens, context_limit),
+            "used_percentage": min(100, (total_tokens / max(total_tokens, context_limit)) * 100),
+            "current_usage": {
+                "input_tokens": diff_input,
+                "output_tokens": diff_output,
+                "cache_read_input_tokens": diff_cache,
+            },
+        },
+    })
+
+
 def main():
     while True:
         state = load_state()
         poll_codex(state)
         poll_opencode(state)
         poll_claude(state)
+        poll_grok(state)
         save_state(state)
         time.sleep(5)
 

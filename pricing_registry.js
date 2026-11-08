@@ -28,6 +28,7 @@ const PRICING_TABLE = {
     'gpt-4-turbo':       { input: 10.00, output: 30.00, cache_read: 5.00, provider: 'OpenAI' },
 
     // xAI Grok Models
+    'grok-4.7':          { input: 3.00, output: 15.00, cache_read: 0.75, provider: 'xAI' },
     'grok-4.5':          { input: 3.00, output: 15.00, cache_read: 0.75, provider: 'xAI' },
     'grok-4':            { input: 3.00, output: 15.00, cache_read: 0.75, provider: 'xAI' },
     'grok-3':            { input: 2.00, output: 10.00, cache_read: 0.50, provider: 'xAI' },
@@ -65,6 +66,7 @@ function resolvePricing(modelName) {
     if (name.includes('claude')) return PRICING_TABLE['claude-3-5-sonnet'];
 
     if (name.includes('grok')) {
+        if (name.includes('4.7') || name.includes('4-7')) return PRICING_TABLE['grok-4.7'];
         if (name.includes('4.5') || name.includes('4-5')) return PRICING_TABLE['grok-4.5'];
         if (name.includes('4')) return PRICING_TABLE['grok-4'];
         if (name.includes('3')) return PRICING_TABLE['grok-3'];

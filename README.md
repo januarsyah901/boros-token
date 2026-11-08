@@ -17,7 +17,7 @@
 - 💵 **Centralized Pricing Registry**: Standardized token rates per 1M tokens across Anthropic, OpenAI, Google, xAI Grok, and DeepSeek with cache read discounts.
 - 📈 **Trend Graphs**: Interactive charts showing token usage trends over time via Chart.js.
 - 📡 **Multi-Agent SSE Stream**: Live updates pushed instantly from Node.js server using Server-Sent Events.
-- 🔄 **Persistent Poller**: Automatically polls Codex, OpenCode, and Claude Code without duplicating events across restarts.
+- 🔄 **Persistent Poller**: Automatically polls Codex, OpenCode, Claude Code, and Grok CLI without duplicating events across restarts.
 - 🐳 **Docker Native**: Run seamlessly in containerized environments with a simple command.
 - 🍏 **macOS Menu Bar Integration**: View current token usage directly from your menu bar using SwiftBar with switchable UI styles (Style A dot or Style B badge).
 - 🛠️ **Full REST API**: Query health, pricing catalog, filtered history, and daily or model aggregations.
@@ -44,7 +44,7 @@ You can monitor your agent token usage directly in your Mac's menu bar using [Sw
    - **Style A**: Monokrom Dot + Arrows + Percentage (e.g. `● ↑ 15k ↓ 2.5k (8.8%)`)
    - **Style B**: Identifier Badge + Arrows (e.g. `CLAUDE ↑ 15k ↓ 2.5k`)
 
-   Clicking the menu bar exposes dropdown details (agent, active model, token counts, context window gauge, style switcher, and link to open the web dashboard).
+   Clicking the menu bar exposes dropdown details (agent, active model, token counts, context window gauge, style switcher, direct server ON/OFF controls, and link to open the web dashboard).
 
 ---
 
@@ -69,14 +69,25 @@ You can monitor your agent token usage directly in your Mac's menu bar using [Sw
 
 ### Option B: Local Setup (Native)
 
-1. Start the server using the helper script:
+1. Start, stop, or restart the server using the helper scripts:
    ```bash
-   ./boros-restart.sh
+   ./boros-start.sh    # Start dashboard server
+   ./boros-stop.sh     # Stop dashboard server
+   ./boros-restart.sh  # Restart dashboard server
    ```
 2. Open your browser:
    ```text
    http://localhost:4000
    ```
+
+### Auto-run on Login (macOS menu bar)
+
+```bash
+./boros-autostart-install.sh    # LaunchAgent + SwiftBar plugin + start now
+./boros-autostart-uninstall.sh  # Remove auto-run (server keeps running)
+```
+
+This installs `~/Library/LaunchAgents/com.boros-token.plist` (runs `node dashboard_server.js` with `KeepAlive` on every login), symlinks `agy_swiftbar.5s.py` into SwiftBar Plugins, launches SwiftBar, and ensures SwiftBar is in Login Items — so token usage shows in the menu bar right after login.
 
 ---
 
@@ -91,6 +102,7 @@ cat payload.json | python3 codex_sender.py
 cat payload.json | python3 opencode_sender.py
 cat payload.json | python3 agy_sender.py
 cat payload.json | python3 claudecode_sender.py
+cat payload.json | python3 grok_sender.py
 ```
 
 ### Convenient Shell Aliases:
@@ -100,6 +112,7 @@ alias codex-token='python3 /path/to/boros-token/codex_sender.py'
 alias opencode-token='python3 /path/to/boros-token/opencode_sender.py'
 alias agy-token='python3 /path/to/boros-token/agy_sender.py'
 alias claudecode-token='python3 /path/to/boros-token/claudecode_sender.py'
+alias grok-token='python3 /path/to/boros-token/grok_sender.py'
 ```
 
 ---
@@ -143,6 +156,7 @@ Based on my preference, proceed with:
    - For Codex: `/absolute/path/to/boros-token/codex_sender.py`
    - For OpenCode: `/absolute/path/to/boros-token/opencode_sender.py`
    - For Claude Code: `/absolute/path/to/boros-token/claudecode_sender.py`
+   - For Grok CLI: `/absolute/path/to/boros-token/grok_sender.py`
    (Be sure to replace `/absolute/path/to/boros-token` with the actual path where this project is located on my machine).
 5. If no built-in piping is available, wrap the terminal launch command for this agent so it intercepts stdout and routes it through the sender script.
 ```
@@ -184,3 +198,7 @@ The dashboard accepts JSON payloads sent via POST to `/api/metadata` matching th
 ## License
 
 Distributed under the MIT License. See [LICENSE](LICENSE) for more information.
+
+## Native menu bar app (BorosBar)
+
+A native replacement for the SwiftBar plugin lives in [`menubar/`](menubar/). Build with `menubar/scripts/build-app.sh`.

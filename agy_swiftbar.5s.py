@@ -18,6 +18,10 @@ SCRIPT_STYLE_A = os.path.join(BASE_DIR, "scripts", "style_a.sh")
 SCRIPT_STYLE_B = os.path.join(BASE_DIR, "scripts", "style_b.sh")
 SCRIPT_TOGGLE = os.path.join(BASE_DIR, "scripts", "style_toggle.sh")
 
+SCRIPT_SERVER_START = os.path.join(BASE_DIR, "scripts", "server_start.sh")
+SCRIPT_SERVER_STOP = os.path.join(BASE_DIR, "scripts", "server_stop.sh")
+SCRIPT_SERVER_RESTART = os.path.join(BASE_DIR, "scripts", "server_restart.sh")
+
 AGENT_BADGES = {
     "terminal": "AGY",
     "agy": "AGY",
@@ -27,6 +31,7 @@ AGENT_BADGES = {
     "opencode": "OPEN",
     "claudecode": "CLAUDE",
     "claude": "CLAUDE",
+    "grok": "GROK",
 }
 
 AGENT_LABELS = {
@@ -38,6 +43,7 @@ AGENT_LABELS = {
     "opencode": "OpenCode",
     "claudecode": "Claude Code",
     "claude": "Claude Code",
+    "grok": "Grok",
 }
 
 
@@ -144,6 +150,10 @@ def main():
                 print(f"Context Window  : {percentage:.2f}% | font=Menlo")
             print(f"[{progress_bar(percentage)}] {percentage:.1f}% used | font=Menlo")
             print("---")
+            print("Server: Online (:4000) | color=#22c55e font=Menlo")
+            print(f"⏹ Turn OFF Server | bash={SCRIPT_SERVER_STOP} terminal=false refresh=true font=Menlo")
+            print(f"↻ Restart Server | bash={SCRIPT_SERVER_RESTART} terminal=false refresh=true font=Menlo")
+            print("---")
 
             # Direct Clickable Style Options
             check_1 = "✓ " if current_style == "1" else "    "
@@ -161,7 +171,11 @@ def main():
             else:
                 print("BT  idle")
             print("---")
+            print("Server: Online (:4000) | color=#22c55e font=Menlo")
             print("No active agent session yet. | color=#94a3b8 font=Menlo")
+            print("---")
+            print(f"⏹ Turn OFF Server | bash={SCRIPT_SERVER_STOP} terminal=false refresh=true font=Menlo")
+            print(f"↻ Restart Server | bash={SCRIPT_SERVER_RESTART} terminal=false refresh=true font=Menlo")
             print("---")
             check_1 = "✓ " if current_style == "1" else "    "
             check_2 = "✓ " if current_style == "2" else "    "
@@ -177,9 +191,17 @@ def main():
         else:
             print("BT  offline")
         print("---")
-        print("🔴 Dashboard Offline | color=#ef4444 font=Menlo")
-        print("Server is not responding on port 4000. | color=#94a3b8 font=Menlo")
-        print("Start it with: ./boros-restart.sh | color=#94a3b8 font=Menlo")
+        print("🔴 Server: Offline | color=#ef4444 font=Menlo")
+        print("Dashboard is stopped on port 4000 | color=#94a3b8 font=Menlo")
+        print("---")
+        print(f"▶ Turn ON Server | bash={SCRIPT_SERVER_START} terminal=false refresh=true font=Menlo")
+        print(f"↻ Restart Server | bash={SCRIPT_SERVER_RESTART} terminal=false refresh=true font=Menlo")
+        print("---")
+        check_1 = "✓ " if current_style == "1" else "    "
+        check_2 = "✓ " if current_style == "2" else "    "
+        print(f"{check_1}Style A · Dot | bash={SCRIPT_STYLE_A} terminal=false refresh=true font=Menlo")
+        print(f"{check_2}Style B · Badge | bash={SCRIPT_STYLE_B} terminal=false refresh=true font=Menlo")
+        print(f"⇄ Toggle Style (A ⇄ B) | bash={SCRIPT_TOGGLE} terminal=false refresh=true font=Menlo")
         print("---")
         print("Open Web Dashboard | href=http://localhost:4000")
         print("Refresh Now | refresh=true")
