@@ -7,6 +7,7 @@ Native macOS menu bar app for [Boros Token](../../project/boros-token). Replaces
   per-agent usage and cost for today, dashboard link, server on/off/restart, update rate, quit.
 - Accents: orange (input) and red (output); text uses `.primary`/`.secondary`.
 - Data: `GET :4000/api/state` is polled continuously (cheap). `/api/stats/daily` is fetched only when the menu opens.
+- LIMITS section: 5 h / weekly usage per provider from `GET :4000/api/limits` (refreshed every 60 s). Sources: Antigravity `quota`, Claude Code `rate_limits`, Codex `rate_limits`; providers without data are hidden. No monthly window.
 - Server scripts are run from `~/Downloads/code/project/boros-token/scripts`
   (override: `defaults write dev.local.borosbar projectDir <path>`).
 

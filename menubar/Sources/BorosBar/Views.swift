@@ -212,3 +212,62 @@ struct TodayListView: View {
         .frame(width: Theme.menuWidth, height: Self.height(rows: min(model.today.count, Self.maxRows)), alignment: .topLeading)
     }
 }
+
+// MARK: Limits (5 h / weekly) per provider
+
+struct LimitsView: View {
+    static let maxGroups = 4
+    static func height(groups: [LimitGroup]) -> CGFloat {
+        guard !groups.isEmpty else { return 0 }
+        let body = groups.prefix(maxGroups).reduce(CGFloat(0)) { $0 + 18 + CGFloat($1.rows.count) * 16 }
+        return 26 + body
+    }
+    let model: BorosModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text("LIMITS").font(.system(size: 9, weight: .semibold)).foregroundStyle(.secondary)
+            ForEach(model.limits.prefix(Self.maxGroups)) { g in
+                let p = Provider(raw: g.provider)
+                HStack(spacing: 5) {
+                    Circle().fill(p.input).frame(width: 7, height: 7)
+                    Text(AgentNames.label(g.provider)).font(.system(size: 11, weight: .medium))
+                }
+                .frame(height: 18, alignment: .bottom)
+                ForEach(g.rows) { r in row(r, p) }
+            }
+        }
+        .padding(.horizontal, 14).padding(.top, 8)
+        .frame(width: Theme.menuWidth, height: Self.height(groups: model.limits), alignment: .topLeading)
+    }
+
+    private func row(_ r: LimitRow, _ p: Provider) -> some View {
+        let frac = min(max(r.usedPct / 100, 0), 1)
+        return HStack(spacing: 6) {
+            Text(r.label).font(.system(size: 10)).foregroundStyle(.secondary)
+                .frame(width: 74, alignment: .leading).lineLimit(1)
+            GeometryReader { g in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(.primary.opacity(0.12))
+                    Capsule().fill(r.usedPct >= 90 ? p.output : p.input)
+                        .frame(width: max(g.size.width * frac, frac > 0 ? 3 : 0))
+                }
+            }
+            .frame(height: 4)
+            Text("\(Int(r.usedPct.rounded()))%").font(.system(size: 10).monospacedDigit())
+                .frame(width: 30, alignment: .trailing)
+            Text(Self.reset(r.resetAt)).font(.system(size: 9).monospacedDigit()).foregroundStyle(.secondary)
+                .frame(width: 42, alignment: .trailing).lineLimit(1)
+        }
+        .frame(height: 16)
+    }
+
+    static func reset(_ d: Date?) -> String {
+        guard let d else { return "" }
+        let s = Int(d.timeIntervalSinceNow)
+        if s <= 0 { return "" }
+        if s >= 86_400 { return "\(s / 86_400)d \((s % 86_400) / 3600)h" }
+        if s >= 3_600 { return "\(s / 3600)h \((s % 3600) / 60)m" }
+        return "\(max(s / 60, 1))m"
+    }
+}

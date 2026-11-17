@@ -13,6 +13,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     private let menu = NSMenu()
     private var rateItems: [NSMenuItem] = []
     private var todayItem: NSMenuItem!
+    private var limitsItem: NSMenuItem!
     private var serverOn: NSMenuItem!
     private var serverOff: NSMenuItem!
 
@@ -61,6 +62,9 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         menu.addItem(.separator())
         todayItem = hosted(TodayListView(model: model), height: TodayListView.height(rows: 1))
         menu.addItem(todayItem)
+        limitsItem = hosted(LimitsView(model: model), height: 1)
+        limitsItem.isHidden = true
+        menu.addItem(limitsItem)
         menu.addItem(.separator())
 
         menu.addItem(action("Open Web Dashboard", #selector(openDashboard)))
@@ -94,6 +98,9 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         // Size the list from the last known data, then refresh it.
         let rows = min(model.today.count, TodayListView.maxRows)
         todayItem.view?.frame.size.height = TodayListView.height(rows: rows)
+        let lh = LimitsView.height(groups: model.limits)
+        limitsItem.isHidden = lh == 0
+        limitsItem.view?.frame.size.height = max(lh, 1)
         model.setMenuOpen(true)
     }
 

@@ -4,6 +4,7 @@ const path = require('path');
 const { execFile } = require('child_process');
 const { dbInstance } = require('./db');
 const { PRICING_TABLE, resolvePricing, calculateCost } = require('./pricing_registry');
+const { collectLimits } = require('./limits');
 
 const PORT = process.env.BOROS_PORT || 4000;
 const DB_FILE = path.join(__dirname, 'history_log.json');
@@ -849,6 +850,10 @@ const server = http.createServer((req, res) => {
             const index = clients.indexOf(res);
             if (index !== -1) clients.splice(index, 1);
         });
+    }
+    else if (req.method === 'GET' && pathname === '/api/limits') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(collectLimits(latestStates)));
     }
     else if (req.method === 'GET' && pathname === '/api/state') {
         const best = computeBestState();
