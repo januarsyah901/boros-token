@@ -510,15 +510,21 @@
             return map[(source || '').toLowerCase()] || (source || 'Unknown');
         }
 
-        // Provider accent dots (same hues as the BorosBar menu bar app)
-        const PROVIDER_COLORS = {
-            claude: '#ee8c61', claudecode: '#ee8c61',
-            codex: '#40d499',
-            grok: '#c7c7d1',
-            terminal: '#61a6fa', agy: '#61a6fa', antigravity: '#61a6fa', code: '#61a6fa', sdk: '#61a6fa',
-            opencode: '#bf85fc'
+        // Provider palette: lighter tone = input, deeper tone = output (same as the BorosBar menu bar app)
+        const PROVIDER_TONES = {
+            claude:      { inp: '#ee8c61', out: '#b84f29' },
+            codex:       { inp: '#40d499', out: '#088c66' },
+            grok:        { inp: '#c7c7d1', out: '#808090' },
+            antigravity: { inp: '#61a6fa', out: '#2159d9' },
+            opencode:    { inp: '#bf85fc', out: '#8033cc' },
+            other:       { inp: '#ff991a', out: '#f2454d' }
         };
-        function providerColor(key) { return PROVIDER_COLORS[(key || '').toLowerCase()] || '#a1a1aa'; }
+        const PROVIDER_ALIAS = {
+            claude: 'claude', claudecode: 'claude', codex: 'codex', grok: 'grok', opencode: 'opencode',
+            terminal: 'antigravity', agy: 'antigravity', antigravity: 'antigravity', code: 'antigravity', sdk: 'antigravity'
+        };
+        function providerTone(key) { return PROVIDER_TONES[PROVIDER_ALIAS[(key || '').toLowerCase()] || 'other']; }
+        function providerColor(key) { return providerTone(key).inp; }
 
         // Circular ring circumference (2 * PI * r) where r = 34
         const ringCircumference = 213.6;
@@ -570,18 +576,20 @@
         // Initialize Chart
         Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif";
         const ctx = document.getElementById('usageChart').getContext('2d');
+        let chartSourceKeys = [];   // provider of each plotted bar; read by the scriptable bar colors below
         const usageChart = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: [],
                 datasets: [
-                    { label: 'Prompt Input Tokens', data: [], backgroundColor: '#0a0a0a', borderRadius: 99, borderSkipped: false, maxBarThickness: 9 },
-                    { label: 'Candidate Output Tokens', data: [], backgroundColor: '#d4d4d8', borderRadius: 99, borderSkipped: false, maxBarThickness: 9 }
+                    { label: 'Prompt Input Tokens', data: [], backgroundColor: (c) => providerTone(chartSourceKeys[c.dataIndex]).inp, borderRadius: 99, borderSkipped: false, maxBarThickness: 9 },
+                    { label: 'Candidate Output Tokens', data: [], backgroundColor: (c) => providerTone(chartSourceKeys[c.dataIndex]).out, borderRadius: 99, borderSkipped: false, maxBarThickness: 9 }
                 ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                animations: { colors: false },
                 categoryPercentage: 0.75,
                 barPercentage: 0.9,
                 plugins: {
@@ -595,7 +603,15 @@
                             boxHeight: 7,
                             padding: 14,
                             color: '#52525b',
-                            font: { size: 11, weight: '500' }
+                            font: { size: 11, weight: '500' },
+                            generateLabels: (chart) => chart.data.datasets.map((d, i) => ({
+                                text: d.label,
+                                fillStyle: i === 0 ? '#a1a1aa' : '#3f3f46',
+                                strokeStyle: 'transparent',
+                                hidden: !chart.isDatasetVisible(i),
+                                datasetIndex: i,
+                                pointStyle: 'circle'
+                            }))
                         }
                     },
                     tooltip: {
@@ -790,6 +806,7 @@
             // 2. Capacity progress ring
             const percentageUsed = state?.context_window?.used_percentage || 0;
             setContextProgress(percentageUsed);
+            contextProgressRing.style.stroke = providerColor(getSourceKey(state || {}));
             
             const windowSize = state?.context_window?.context_window_size || 1048576;
             contextCapDetail.textContent = `${formatInt(totalInVal + totalOutVal)} / ${formatInt(windowSize)} tokens`;
@@ -837,8 +854,8 @@
                         <span title="${evt.model}">${evt.model}</span>
                     </div>
                     <div class="recent-request-stats">
-                        <span class="stat-up">${formatInt(evt.current_input)}↑</span>
-                        <span class="stat-down">${formatInt(evt.current_output)}↓</span>
+                        <span class="stat-up" style="color:${providerTone(getSourceKey(evt)).inp}">${formatInt(evt.current_input)}↑</span>
+                        <span class="stat-down" style="color:${providerTone(getSourceKey(evt)).out}">${formatInt(evt.current_output)}↓</span>
                     </div>
                     <div class="recent-request-time">${formatRelativeTime(evt.timestamp)}</div>
                 </div>
@@ -858,6 +875,8 @@
                 const time = new Date(evt.timestamp);
                 return isNaN(time.getTime()) ? '—' : time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             });
+
+            chartSourceKeys = chartSlice.map(evt => getSourceKey(evt));
 
             if (activeChartMode === 'tokens') {
                 usageChart.data.datasets[0].label = 'Prompt Input Tokens';
