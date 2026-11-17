@@ -8,20 +8,6 @@ struct Sample: Identifiable {
     let outRate: Double
 }
 
-struct LimitRow: Identifiable {
-    var id: String { key }
-    let key: String
-    let label: String
-    let usedPct: Double
-    let resetAt: Date?
-}
-
-struct LimitGroup: Identifiable {
-    var id: String { provider }
-    let provider: String
-    let rows: [LimitRow]
-}
-
 struct AgentDay: Identifiable {
     var id: String { agent }
     let agent: String
@@ -61,11 +47,9 @@ final class BorosModel {
     var hHistory: [Sample] = []
     @ObservationIgnored var menuOpen = false
     var today: [AgentDay] = []
-    var limits: [LimitGroup] = []
     var interval: TimeInterval
 
     @ObservationIgnored private var pollTimer: Timer?
-    @ObservationIgnored private var limitsTimer: Timer?
     @ObservationIgnored private var smoothTimer: Timer?
     @ObservationIgnored private var inFlight = false
     @ObservationIgnored private var prev: (key: String, time: Date, inT: Double, outT: Double)?
@@ -88,14 +72,7 @@ final class BorosModel {
 
     func start() {
         schedulePoll()
-        Task { await fetchToday(); await fetchLimits() }
-        // Limits change slowly; refresh in the background so the menu has them (and its height) ready on open.
-        let t = Timer(timeInterval: 60, repeats: true) { [weak self] _ in
-            Task { @MainActor in await self?.fetchLimits() }
-        }
-        t.tolerance = 15
-        RunLoop.main.add(t, forMode: .common)
-        limitsTimer = t
+        Task { await fetchToday() }
     }
 
     func setInterval(_ s: TimeInterval) {
@@ -200,7 +177,7 @@ final class BorosModel {
 
     func setMenuOpen(_ open: Bool) {
         menuOpen = open
-        if open { syncHeader(); Task { await fetchToday(); await fetchLimits() } }
+        if open { syncHeader(); Task { await fetchToday() } }
     }
 
     func fetchToday() async {
@@ -216,21 +193,5 @@ final class BorosModel {
                             tokens: tok,
                             cost: ($0["total_cost"] as? NSNumber)?.doubleValue ?? 0)
         }.sorted { $0.cost > $1.cost || ($0.cost == $1.cost && $0.tokens > $1.tokens) }
-    }
-
-    func fetchLimits() async {
-        guard let groups = await getJSON("/api/limits") as? [[String: Any]] else { return }
-        let iso = ISO8601DateFormatter()
-        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        limits = groups.compactMap { g in
-            guard let provider = g["provider"] as? String, let rows = g["rows"] as? [[String: Any]] else { return nil }
-            let parsed = rows.compactMap { r -> LimitRow? in
-                guard let key = r["key"] as? String, let label = r["label"] as? String,
-                      let used = (r["usedPct"] as? NSNumber)?.doubleValue else { return nil }
-                return LimitRow(key: key, label: label, usedPct: used,
-                                resetAt: (r["resetAt"] as? String).flatMap { iso.date(from: $0) })
-            }
-            return parsed.isEmpty ? nil : LimitGroup(provider: provider, rows: parsed)
-        }
     }
 }
