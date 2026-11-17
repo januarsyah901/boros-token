@@ -14,681 +14,295 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
-            --bg-color: #f5f7fa;
-            --grid-color: rgba(90, 132, 245, 0.04);
+            --bg-outer: #d8d8db;
+            --bg-main: #f0f0f1;
             --card-bg: #ffffff;
-            --border-color: #e2e8f0;
-            --text-primary: #0f172a;
-            --text-muted: #64748b;
-            
-            --accent-terracotta: #5A84F5;
-            --accent-terracotta-hover: #3b6de6;
-            --accent-green: #10b981;
-            --accent-amber: #f59e0b;
-            
-            --tab-active-bg: #ffffff;
-            --tab-inactive-bg: #e2e8f0;
-            --tab-inactive-text: #64748b;
-            --card-shadow: 0 1px 3px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.02);
-            --pill-active-bg: #5A84F5;
-            --pill-active-text: #ffffff;
+            --soft: #f4f4f5;
+            --soft-2: #e9e9eb;
+            --border-color: #e4e4e7;
+            --ink: #0a0a0a;
+            --text-primary: #0a0a0a;
+            --text-muted: #71717a;
+            /* kept as names because the JS templates reference them; all monochrome now */
+            --accent-terracotta: #0a0a0a;
+            --accent-green: #52525b;
+            --accent-amber: #0a0a0a;
+            --radius-xl: 28px;
+            --radius-lg: 22px;
+            --card-shadow: 0 1px 2px rgba(0,0,0,.03), 0 8px 24px rgba(0,0,0,.04);
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background-color: var(--bg-color);
-            background-image: 
-                linear-gradient(var(--grid-color) 1px, transparent 1px),
-                linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
-            background-size: 20px 20px;
-            color: var(--text-primary);
+            color: var(--ink);
             min-height: 100vh;
-            padding: 1rem 1.5rem;
-            transition: background-color 0.3s, color 0.3s;
+            padding: 1.25rem;
+            background: radial-gradient(1200px 700px at 50% 0%, #e6e6e8 0%, var(--bg-outer) 70%);
+            -webkit-font-smoothing: antialiased;
         }
 
-        .container {
-            max-width: 1400px;
+        /* ---------- App frame ---------- */
+        .app {
+            max-width: 1480px;
             margin: 0 auto;
+            min-height: calc(100vh - 2.5rem);
+            display: grid;
+            grid-template-columns: 236px 1fr;
+            background: var(--bg-main);
+            border: 4px solid #fff;
+            border-radius: 40px;
+            overflow: hidden;
+            box-shadow: 0 30px 60px rgba(0,0,0,.10);
+        }
+
+        .sidebar {
+            background: #fff;
+            padding: 1.75rem 1.1rem 1.5rem;
             display: flex;
             flex-direction: column;
-            gap: 1rem;
+            gap: 2.25rem;
         }
+        .brand { display: flex; align-items: center; gap: .6rem; padding: 0 .5rem; }
+        .brand img { width: 40px; height: 40px; object-fit: contain; border-radius: 10px; }
+        .brand h1 { font-family: 'Space Grotesk', sans-serif; font-size: 1.35rem; font-weight: 700; letter-spacing: -.02em; }
 
-        /* Header Styles */
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding-bottom: 0.5rem;
-        }
-
-        .header-title-area {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .logo-icon-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 72px;
-            height: 72px;
-            border-radius: 8px;
-            background: transparent;
-            border: none;
-        }
-
-        h1 {
-            font-size: 1.45rem;
-            font-weight: 700;
-            letter-spacing: -0.015em;
-            color: var(--text-primary);
-        }
-
-        .header-subtitle {
-            font-size: 0.875rem;
-            color: var(--text-muted);
-            margin-top: 0.15rem;
-        }
-
-        .header-right {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .icon-btn {
-            background: none;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 0.5rem;
-            color: var(--text-muted);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-            background-color: var(--card-bg);
-        }
-
-        .icon-btn:hover {
-            color: var(--text-primary);
-            border-color: var(--text-muted);
-        }
-
-        /* Live Status Badge */
-        .status-badge-inline {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-            padding: 0.25rem 0.65rem;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            background: rgba(25, 25, 25, 0.04);
-            border: 1px solid var(--border-color);
-            color: var(--text-muted);
-        }
-
-        .status-badge-inline.connected {
-            background: rgba(16, 185, 129, 0.08);
-            border-color: rgba(16, 185, 129, 0.2);
-            color: #059669;
-        }
-
-        .status-badge-inline .dot {
-            width: 6px;
-            height: 6px;
-            background-color: var(--text-muted);
-            border-radius: 50%;
-        }
-
-        .status-badge-inline.connected .dot {
-            background-color: var(--accent-green);
-            animation: pulse-dot 2s infinite;
-        }
-
-        @keyframes pulse-dot {
-            0% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.2); opacity: 0.6; }
-            100% { transform: scale(1); opacity: 1; }
-        }
-
-        /* Tabs Navigation Row */
-        .nav-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 0.25rem;
-        }
-
-        .tabs-container {
-            display: flex;
-            background: var(--tab-inactive-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 0.25rem;
-            gap: 0.25rem;
-        }
-
+        .nav { display: flex; flex-direction: column; gap: .5rem; }
         .tab-btn {
-            background: none;
-            border: none;
-            padding: 0.45rem 1.15rem;
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: var(--tab-inactive-text);
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s;
+            display: flex; align-items: center; gap: .75rem;
+            width: 100%; border: none; cursor: pointer;
+            background: transparent; color: #3f3f46;
+            font: 500 .9rem 'Inter', sans-serif;
+            padding: .35rem .9rem .35rem .4rem;
+            border-radius: 999px; text-align: left;
+            transition: background .2s, color .2s;
         }
-
+        .tab-btn .ico {
+            width: 34px; height: 34px; border-radius: 50%;
+            display: grid; place-items: center; flex-shrink: 0;
+            background: var(--soft); color: #52525b;
+        }
+        .tab-btn .ico svg { width: 16px; height: 16px; }
+        .tab-btn:hover { background: var(--soft); }
         .tab-btn.active {
-            background: var(--tab-active-bg);
-            color: var(--text-primary);
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-            font-weight: 600;
+            color: #fff; font-weight: 600;
+            background: linear-gradient(180deg, #2a2a2a, #000);
+            box-shadow: 0 6px 14px rgba(0,0,0,.22);
+        }
+        .tab-btn.active .ico { background: #fff; color: #000; }
+
+        .sidebar-foot { margin-top: auto; padding: 0 .6rem; font-size: .75rem; line-height: 1.5; color: var(--text-muted); }
+        .sidebar-foot strong { display: block; color: var(--ink); font-size: .8rem; margin-bottom: .15rem; }
+
+        /* ---------- Main ---------- */
+        .main {
+            padding: 1.5rem 1.75rem 2rem;
+            display: flex; flex-direction: column; gap: 1.1rem;
+            background: radial-gradient(700px 400px at 0% 0%, #fff 0%, rgba(255,255,255,0) 70%);
+            min-width: 0;
         }
 
-        .time-filters {
-            display: flex;
-            gap: 0.15rem;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .agent-filter {
-            min-width: 170px;
-        }
-
+        .toolbar { display: flex; justify-content: flex-end; align-items: center; gap: .6rem; flex-wrap: wrap; }
+        .time-filters { display: flex; gap: .15rem; align-items: center; background: #fff; border-radius: 999px; padding: .25rem; box-shadow: var(--card-shadow); }
         .filter-btn {
-            background: none;
-            border: none;
-            padding: 0.35rem 0.75rem;
-            font-size: 0.825rem;
-            font-weight: 500;
-            color: var(--text-muted);
-            cursor: pointer;
-            border-radius: 4px;
+            border: none; background: none; cursor: pointer;
+            padding: .4rem .85rem; font: 500 .8rem 'Inter', sans-serif;
+            color: var(--text-muted); border-radius: 999px; transition: all .15s;
         }
+        .filter-btn:hover { color: var(--ink); }
+        .filter-btn.active { background: var(--ink); color: #fff; font-weight: 600; }
 
-        .filter-btn.active {
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            color: var(--text-primary);
-            font-weight: 600;
-            box-shadow: var(--card-shadow);
+        .select-styled {
+            padding: .55rem 2.1rem .55rem 1rem;
+            font: 600 .82rem 'Inter', sans-serif; color: var(--ink);
+            background-color: #fff; border: 1px solid var(--ink); border-radius: 999px;
+            cursor: pointer; outline: none; appearance: none;
+            background-image: url("data:image/svg+xml;utf8,<svg fill='none' stroke='%230a0a0a' stroke-width='2' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><polyline points='6 9 12 15 18 9'></polyline></svg>");
+            background-repeat: no-repeat; background-position: right .8rem center; background-size: 13px;
         }
+        .agent-filter { min-width: 170px; }
 
-        /* Metrics Cards Grid */
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1rem;
-        }
-
-        @media (max-width: 900px) {
-            .metrics-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 550px) {
-            .metrics-grid {
-                grid-template-columns: 1fr;
-            }
-        }
+        /* Quick stats row */
+        .quick { display: grid; grid-template-columns: minmax(170px, 1.05fr) repeat(4, minmax(0, 1fr)); gap: .9rem; align-items: stretch; }
+        .quick-intro { padding: 1.1rem .4rem 0 .3rem; }
+        .quick-intro h2 { font-family: 'Space Grotesk', sans-serif; font-size: 1.5rem; font-weight: 700; letter-spacing: -.02em; }
+        .quick-intro p { margin-top: 1rem; font-size: .85rem; line-height: 1.5; color: var(--text-muted); }
 
         .metric-card {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 1.25rem;
-            box-shadow: var(--card-shadow);
-            display: flex;
-            flex-direction: column;
-            gap: 0.35rem;
+            background: var(--card-bg); border-radius: var(--radius-xl);
+            padding: 1.15rem 1rem 1.2rem; min-height: 168px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .3rem;
+            text-align: center; box-shadow: var(--card-shadow);
         }
+        .metric-icon { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; background: var(--soft); color: #52525b; margin-bottom: .55rem; }
+        .metric-icon svg { width: 20px; height: 20px; }
+        .metric-card.accent .metric-icon { background: #000; color: #fff; }
+        .metric-value { font-family: 'Space Grotesk', sans-serif; font-size: 1.85rem; font-weight: 700; letter-spacing: -.02em; color: var(--ink); line-height: 1.1; }
+        .metric-label { font-size: .78rem; font-weight: 500; color: #3f3f46; }
+        .metric-sub { font-size: .68rem; color: var(--text-muted); }
 
-        .metric-label {
-            font-size: 0.725rem;
-            font-weight: 600;
-            letter-spacing: 0.05em;
-            color: var(--text-muted);
-            text-transform: uppercase;
-        }
-
-        .metric-value {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--text-primary);
-        }
-
-        .metric-value.input-tokens {
-            color: var(--accent-terracotta);
-        }
-
-        .metric-value.output-tokens {
-            color: var(--accent-green);
-        }
-
-        .metric-value.est-cost {
-            color: var(--accent-amber);
-        }
-
-        .metric-sub {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            margin-top: auto;
-        }
-
-        .agent-summary-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1rem;
-            margin-top: 0.25rem;
-        }
-
-        @media (max-width: 900px) {
-            .agent-summary-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
+        /* Agent summary */
+        .agent-summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .9rem; }
         .agent-summary-card {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 1rem 1.1rem;
-            box-shadow: var(--card-shadow);
-            display: flex;
-            flex-direction: column;
-            gap: 0.3rem;
+            background: var(--card-bg); border-radius: var(--radius-lg); padding: 1rem 1.2rem;
+            box-shadow: var(--card-shadow); display: flex; flex-direction: column; gap: .3rem;
         }
-
-        .agent-summary-label {
-            font-size: 0.72rem;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            color: var(--text-muted);
-            font-weight: 600;
-        }
-
-        .agent-summary-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-            font-family: 'Space Grotesk', sans-serif;
-        }
-
-        .agent-summary-meta {
-            font-size: 0.78rem;
-            color: var(--text-muted);
-        }
+        .agent-summary-label { display: flex; align-items: center; gap: .5rem; font-size: .82rem; font-weight: 600; color: #3f3f46; }
+        .agent-summary-value { font-family: 'Space Grotesk', sans-serif; font-size: 1.55rem; font-weight: 700; letter-spacing: -.02em; }
+        .agent-summary-meta { font-size: .74rem; color: var(--text-muted); }
+        .pdot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; background: var(--dot, #a1a1aa); box-shadow: 0 0 0 3px color-mix(in srgb, var(--dot, #a1a1aa) 18%, transparent); }
 
         /* Panels */
         .panel {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            box-shadow: var(--card-shadow);
-            padding: 1.25rem;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
+            background: var(--card-bg); border-radius: var(--radius-xl);
+            padding: 1.4rem 1.5rem; box-shadow: var(--card-shadow);
+            display: flex; flex-direction: column; gap: 1rem; min-width: 0;
         }
+        .panel-header { display: flex; justify-content: space-between; align-items: center; gap: .75rem; flex-wrap: wrap; }
+        .panel-title { font-family: 'Space Grotesk', sans-serif; font-size: 1.25rem; font-weight: 700; letter-spacing: -.01em; color: var(--ink); }
+        .row-2 { display: grid; grid-template-columns: 2.2fr 1fr; gap: .9rem; }
+        .side-widgets { display: grid; grid-template-columns: 1fr 1fr; gap: .9rem; }
 
-        .panel-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+        .pill-toggle { display: inline-flex; gap: .2rem; background: var(--soft); border-radius: 999px; padding: .2rem; }
+        .pill-btn { border: none; background: none; cursor: pointer; padding: .35rem .9rem; font: 600 .78rem 'Inter', sans-serif; color: var(--text-muted); border-radius: 999px; transition: all .15s; }
+        .pill-btn.active { background: var(--ink); color: #fff; }
 
-        .panel-title {
-            font-size: 1.05rem;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
+        .chart-container { position: relative; width: 100%; height: 290px; }
 
-        /* Pill toggles */
-        .pill-toggle {
-            display: inline-flex;
-            background: var(--tab-inactive-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 0.175rem;
-            gap: 0.15rem;
-        }
+        /* Recent requests */
+        .recent-head { display: flex; justify-content: space-between; gap: .75rem; font-size: .72rem; font-weight: 600; color: var(--text-muted); padding-bottom: .5rem; }
+        .recent-request-row { display: flex; align-items: center; justify-content: space-between; gap: .75rem; font-size: .85rem; padding: .7rem 0; }
+        .recent-request-model { display: flex; align-items: center; gap: .55rem; font-weight: 600; font-size: .8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 2; min-width: 0; }
+        .recent-request-dot { width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0; background: var(--soft); display: grid; place-items: center; }
+        .recent-request-dot::after { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--dot, #a1a1aa); }
+        .recent-request-stats { text-align: right; font-size: .75rem; white-space: nowrap; flex: 1; font-weight: 600; }
+        .recent-request-time { text-align: right; color: var(--text-muted); font-size: .74rem; flex: 1; }
+        .stat-up { color: var(--ink); margin-right: .3rem; }
+        .stat-down { color: #a1a1aa; }
+        #recentRequestsList { flex: 1; overflow-y: auto; display: flex; flex-direction: column; max-height: 320px; padding-right: .25rem; }
 
-        .pill-btn {
-            background: none;
-            border: none;
-            padding: 0.3rem 0.85rem;
-            font-size: 0.78rem;
-            font-weight: 600;
-            color: var(--text-muted);
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.15s;
-        }
+        /* Tables: soft rounded rows */
+        table { width: 100%; border-collapse: separate; border-spacing: 0 6px; text-align: left; font-size: .85rem; }
+        th { color: var(--text-muted); font-weight: 500; font-size: .78rem; padding: .35rem 1rem; white-space: nowrap; }
+        td { padding: .8rem 1rem; background: var(--soft); white-space: nowrap; }
+        td:first-child { border-radius: 16px 0 0 16px; }
+        td:last-child { border-radius: 0 16px 16px 0; }
+        tr:hover td { background: var(--soft-2); }
+        .table-model-cell { display: flex; align-items: center; gap: .5rem; font-weight: 600; }
+        .expand-arrow { color: var(--text-muted); transition: transform .2s; }
 
-        .pill-btn.active {
-            background: var(--pill-active-bg);
-            color: var(--pill-active-text);
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-        }
+        .badge { display: inline-flex; align-items: center; gap: .4rem; padding: .22rem .65rem; border-radius: 999px; font-size: .7rem; font-weight: 600; background: var(--soft-2); color: #3f3f46; }
+        .badge.idle { background: var(--soft-2); color: var(--text-muted); }
+        .badge.working { background: var(--ink); color: #fff; }
+        .badge.cache { background: #fff; border: 1px solid var(--border-color); color: #3f3f46; margin-left: .35rem; }
+        .badge.prod-engine, .badge.prod-cli, .badge.prod-ide, .badge.prod-sdk { background: #fff; border: 1px solid var(--border-color); color: var(--ink); }
 
-        /* Chart Canvas Container */
-        .chart-container {
-            position: relative;
-            width: 100%;
-            height: 280px;
-        }
+        .logs-table-container { max-height: 75vh; overflow: auto; }
+        .logs-table-container th { position: sticky; top: 0; background: #fff; z-index: 1; }
+        .hidden { display: none !important; }
 
-        /* Table & Lists Styles */
-        .model-list-section {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
+        /* Context ring + last turn */
+        .ring-wrap { display: flex; align-items: center; gap: 1.5rem; }
+        .ring-box { position: relative; width: 85px; height: 85px; flex-shrink: 0; }
+        .ring-box .pct { position: absolute; inset: 0; display: grid; place-items: center; font-weight: 700; font-size: .95rem; }
+        .ctx-detail { display: flex; flex-direction: column; gap: .25rem; flex: 1; min-width: 0; }
+        .lt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; font-size: .85rem; }
+        .lt-cell { background: var(--soft); border-radius: 18px; padding: .8rem 1rem; }
+        .lt-cell small { display: block; color: var(--text-muted); font-size: .72rem; margin-bottom: .15rem; }
+        .lt-cell strong { font-family: 'Space Grotesk', sans-serif; font-size: 1.25rem; }
 
-        .select-styled {
-            padding: 0.45rem 2rem 0.45rem 1rem;
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            cursor: pointer;
-            outline: none;
-            appearance: none;
-            background-image: url("data:image/svg+xml;utf8,<svg fill='none' stroke='%236b6b63' stroke-width='2' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'><polyline points='6 9 12 15 18 9'></polyline></svg>");
-            background-repeat: no-repeat;
-            background-position: right 0.75rem center;
-            background-size: 14px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-            font-size: 0.875rem;
-        }
-
-        th, td {
-            padding: 0.85rem 1rem;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        th {
-            color: var(--text-muted);
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 0.725rem;
-            letter-spacing: 0.05em;
-            background-color: rgba(25, 25, 25, 0.01);
-        }
-
-        tr:last-child td {
-            border-bottom: none;
-        }
-
-        tr:hover td {
-            background-color: rgba(25, 25, 25, 0.005);
-        }
-
-        .table-model-cell {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .expand-arrow {
-            color: var(--text-muted);
-            transition: transform 0.2s;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 0.2rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.725rem;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .badge.idle {
-            background: rgba(107, 107, 99, 0.1);
-            color: var(--text-muted);
-        }
-
-        .badge.working {
-            background: rgba(224, 90, 71, 0.1);
-            color: var(--accent-terracotta);
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        /* Details Tab styling */
-        .logs-table-container {
-            max-height: 75vh;
-            overflow-y: auto;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-        }
-
-        .badge.cache {
-            background: rgba(16, 185, 129, 0.08);
-            border: 1px dashed rgba(16, 185, 129, 0.3);
-            color: #059669;
-            margin-left: 0.25rem;
-        }
-
-        .badge.prod-engine, .badge.prod-cli, .badge.prod-ide, .badge.prod-sdk {
-            text-transform: none;
-            border-radius: 6px;
-            padding: 0.15rem 0.45rem;
-        }
-        
-        .badge.prod-engine {
-            background: rgba(100, 116, 139, 0.08);
-            border: 1px solid rgba(100, 116, 139, 0.15);
-            color: #475569;
-        }
-        .badge.prod-cli {
-            background: rgba(90, 132, 245, 0.08);
-            border: 1px solid rgba(90, 132, 245, 0.15);
-            color: #3b6de6;
-        }
-        .badge.prod-ide {
-            background: rgba(139, 92, 246, 0.08);
-            border: 1px solid rgba(139, 92, 246, 0.15);
-            color: #7c3aed;
-        }
-        .badge.prod-sdk {
-            background: rgba(13, 148, 136, 0.08);
-            border: 1px solid rgba(13, 148, 136, 0.15);
-            color: #0d9488;
-        }
-
-        /* Layout Grid and Columns */
-        #dashboardGrid {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            width: 100%;
-        }
-
-        .main-column {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-            width: 100%;
-        }
-
-        .sidebar-column {
-            width: 100%;
-        }
-
-        /* Stacked mode specific styles */
-        #dashboardGrid.layout-stacked .sidebar-column .side-widgets {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-        }
-
+        /* Responsive */
+        @media (max-width: 1180px) { .quick { grid-template-columns: repeat(2, 1fr); } .quick-intro { grid-column: 1 / -1; padding-bottom: .25rem; } .quick-intro p { margin-top: .4rem; } }
         @media (max-width: 900px) {
-            #dashboardGrid.layout-stacked .sidebar-column .side-widgets {
-                grid-template-columns: 1fr;
-            }
+            body { padding: .6rem; }
+            .app { grid-template-columns: 1fr; border-radius: 28px; }
+            .sidebar { flex-direction: row; align-items: center; flex-wrap: wrap; gap: .75rem; padding: 1rem; }
+            .nav { flex-direction: row; }
+            .tab-btn { width: auto; }
+            .sidebar-foot { display: none; }
+            .row-2, .side-widgets, .agent-summary-grid { grid-template-columns: 1fr; }
+            .main { padding: 1rem; }
         }
-
-        /* Split mode specific styles (applied only on desktop screens) */
-        @media (min-width: 1025px) {
-            #dashboardGrid.layout-split {
-                display: grid;
-                grid-template-columns: 2.8fr 1.2fr;
-                align-items: start;
-            }
-
-            #dashboardGrid.layout-split .sidebar-column .side-widgets {
-                display: flex;
-                flex-direction: column;
-                gap: 1rem;
-            }
-            
-            #dashboardGrid.layout-split .metrics-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        /* Layout button active state */
-        .icon-btn.active {
-            background-color: rgba(224, 90, 71, 0.08);
-            color: var(--accent-terracotta);
-            border-color: rgba(224, 90, 71, 0.25);
-        }
-        .recent-request-row {
-            display: flex; 
-            align-items: center;
-            justify-content: space-between;
-            font-size: 0.85rem;
-            padding: 0.6rem 0;
-            border-bottom: 1px solid rgba(25, 25, 25, 0.04);
-            gap: 0.75rem;
-        }        .recent-request-row:last-child {
-            border-bottom: none;
-        }
-        .recent-request-model {
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-            font-size: 0.75rem;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            flex: 2;
-            min-width: 0;
-        }
-        .recent-request-dot {
-            width: 6px; height: 6px; border-radius: 50%;
-            background-color: var(--accent-green);
-            flex-shrink: 0;
-        }
-        .recent-request-stats {
-            text-align: right;
-            font-size: 0.75rem;
-            white-space: nowrap;
-            flex: 1;
-        }
-        .stat-up { color: var(--accent-terracotta); margin-right: 0.25rem; }
-        .stat-down { color: var(--accent-green); }
-        .recent-request-time {
-            text-align: right;
-            color: var(--text-muted);
-            font-size: 0.75rem;
-            flex: 1;
-        }
+        @media (max-width: 520px) { .quick { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Header -->
-        <header>
-            <div class="header-title-area">
-                <div class="logo-icon-container">
-                    <img src="/favicon.png?v=3" alt="Mascot Logo" style="width: 100%; height: 100%; border-radius: 8px; object-fit: contain;">
-                </div>
-                <div>
-                    <h1>boros token</h1>
-                    <div class="header-subtitle">Multi-agent token monitor untuk Codex, OpenCode, Agy, Claude Code, dan CLI lain</div>
-                </div>
-            </div>        </header>
-
-        <!-- Navigation Row -->
-        <div class="nav-row">
-            <div class="tabs-container">
-                <button id="overviewTabBtn" class="tab-btn active">Overview</button>
-                <button id="detailsTabBtn" class="tab-btn">Details</button>
+    <div class="app">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="brand">
+                <img src="/favicon.png?v=3" alt="boros token logo">
+                <h1>boros token</h1>
             </div>
-            <div class="time-filters" id="timeFilters">
+            <nav class="nav">
+                <button id="overviewTabBtn" class="tab-btn active">
+                    <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg></span>
+                    Overview
+                </button>
+                <button id="detailsTabBtn" class="tab-btn">
+                    <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg></span>
+                    Details
+                </button>
+            </nav>
+            <div class="sidebar-foot">
+                <strong>Multi-agent monitor</strong>
+                Codex, OpenCode, Agy, Claude Code, dan CLI lain.
+            </div>
+        </aside>
+
+        <main class="main">
+            <!-- Filters -->
+            <div class="toolbar">
                 <select id="agentFilterSelect" class="select-styled agent-filter">
                     <option value="all">All Agents</option>
                 </select>
-                <button class="filter-btn" data-filter="Today">Today</button>
-                <button class="filter-btn active" data-filter="24h">24h</button>
-                <button class="filter-btn" data-filter="7D">7D</button>
-                <button class="filter-btn" data-filter="30D">30D</button>
-                <button class="filter-btn" data-filter="60D">60D</button>
+                <div class="time-filters" id="timeFilters">
+                    <button class="filter-btn" data-filter="Today">Today</button>
+                    <button class="filter-btn active" data-filter="24h">24h</button>
+                    <button class="filter-btn" data-filter="7D">7D</button>
+                    <button class="filter-btn" data-filter="30D">30D</button>
+                    <button class="filter-btn" data-filter="60D">60D</button>
+                </div>
             </div>
-        </div>
 
-        <!-- OVERVIEW TAB CONTENT -->
-        <div id="overviewTabContent" class="tab-content-wrapper">
-            <div id="dashboardGrid" class="layout-stacked">
-                <div class="main-column">
-                    <!-- Metrics Summary Cards -->
-                    <div class="metrics-grid">
+            <!-- OVERVIEW TAB CONTENT -->
+            <div id="overviewTabContent" class="tab-content-wrapper" style="display: flex; flex-direction: column; gap: .9rem;">
+                <div id="dashboardGrid" style="display: flex; flex-direction: column; gap: .9rem;">
+                    <div class="quick">
+                        <div class="quick-intro">
+                            <h2>Quick Stats</h2>
+                            <p>Token usage for the selected time window.</p>
+                        </div>
                         <div class="metric-card">
-                            <span class="metric-label">Total Requests</span>
+                            <span class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>
                             <span id="totalRequests" class="metric-value">0</span>
+                            <span class="metric-label">Total Requests</span>
                         </div>
                         <div class="metric-card">
-                            <span class="metric-label">Total Input Tokens</span>
-                            <span id="totalInput" class="metric-value input-tokens">0</span>
+                            <span class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 7L7 17M17 17H7V7"/></svg></span>
+                            <span id="totalInput" class="metric-value">0</span>
+                            <span class="metric-label">Input Tokens</span>
                         </div>
                         <div class="metric-card">
+                            <span class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M7 7h10v10"/></svg></span>
+                            <span id="totalOutput" class="metric-value">0</span>
                             <span class="metric-label">Output Tokens</span>
-                            <span id="totalOutput" class="metric-value output-tokens">0</span>
                         </div>
-                        <div class="metric-card">
+                        <div class="metric-card accent">
+                            <span class="metric-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
+                            <span id="estCost" class="metric-value">~$0.00</span>
                             <span class="metric-label">Est. Cost</span>
-                            <span id="estCost" class="metric-value est-cost">~$0.00</span>
                             <span class="metric-sub">Estimated, not actual billing</span>
                         </div>
                     </div>
 
                     <div id="agentSummaryGrid" class="agent-summary-grid"></div>
 
-                    <!-- Chart & Recent Panel Container -->
-                    <div class="chart-and-recent" style="display: grid; grid-template-columns: 2.2fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
-                        <!-- Chart Panel -->
-                        <div class="panel" style="margin-bottom: 0;">
+                    <div class="row-2">
+                        <div class="panel">
                             <div class="panel-header">
+                                <span class="panel-title">Statistics</span>
                                 <div class="pill-toggle">
                                     <button id="chartToggleTokens" class="pill-btn active">Tokens</button>
                                     <button id="chartToggleCost" class="pill-btn">Cost</button>
@@ -699,28 +313,20 @@
                             </div>
                         </div>
 
-                        <!-- Recent Requests Panel -->
-                        <div class="panel" style="margin-bottom: 0; display: flex; flex-direction: column;">
-                            <span class="panel-title" style="font-size: 0.8rem; letter-spacing: 1px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.75rem;">Recent Requests</span>
-                            
-                            <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-color); gap: 0.75rem;">
+                        <div class="panel">
+                            <span class="panel-title">Recent Requests</span>
+                            <div class="recent-head">
                                 <div style="flex: 2;">Model</div>
                                 <div style="flex: 1; text-align: right;">In / Out</div>
                                 <div style="flex: 1; text-align: right;">When</div>
                             </div>
-                            
-                            <div id="recentRequestsList" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; max-height: 320px; padding-right: 0.25rem;">
-                                <!-- populated by js -->
-                            </div>
+                            <div id="recentRequestsList"></div>
                         </div>
                     </div>
 
-                    <!-- Usage by Model Table Panel -->
                     <div class="panel">
                         <div class="panel-header">
-                            <select class="select-styled">
-                                <option>Usage by Model</option>
-                            </select>
+                            <span class="panel-title">Usage by Model</span>
                             <div class="pill-toggle">
                                 <button id="tableToggleCosts" class="pill-btn active">Costs</button>
                                 <button id="tableToggleTokens" class="pill-btn">Tokens</button>
@@ -728,90 +334,72 @@
                         </div>
                         <div style="overflow-x: auto;">
                             <table>
-                                <thead id="modelTableHead">
-                                    <!-- Rendered dynamically based on Costs vs Tokens -->
-                                </thead>
+                                <thead id="modelTableHead"></thead>
                                 <tbody id="modelTableBody">
-                                    <tr>
-                                        <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem 0;">No model activity logged yet.</td>
-                                    </tr>
+                                    <tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem 0;">No model activity logged yet.</td></tr>
                                 </tbody>
                             </table>
                         </div>
                     </div>
-                </div>
 
-                <div class="sidebar-column">
-                    <!-- Side widgets (Context + Last Turn) -->
                     <div class="side-widgets">
                         <div class="panel">
-                            <span class="panel-title">Context Window Capacity</span>
-                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; margin-top: 0.5rem;">
-                                <!-- Tiny progress circular bar -->
-                                <div style="position: relative; width: 85px; height: 85px;">
+                            <span class="panel-title">Context Window</span>
+                            <div class="ring-wrap">
+                                <div class="ring-box">
                                     <svg width="85" height="85">
-                                        <circle stroke="var(--border-color)" stroke-width="8" fill="transparent" r="34" cx="42.5" cy="42.5" />
+                                        <circle stroke="var(--soft-2)" stroke-width="8" fill="transparent" r="34" cx="42.5" cy="42.5" />
                                         <circle id="contextProgressRing" stroke="var(--accent-terracotta)" stroke-width="8" stroke-linecap="round" fill="transparent" r="34" cx="42.5" cy="42.5" stroke-dasharray="213.6" stroke-dashoffset="213.6" style="transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dashoffset 0.6s;" />
                                     </svg>
-                                    <div id="contextPercentText" style="position: absolute; top:50%; left:50%; transform: translate(-50%, -50%); font-weight: 700; font-size: 0.95rem;">0%</div>
+                                    <div id="contextPercentText" class="pct">0%</div>
                                 </div>
-                                <div style="display: flex; flex-direction: column; gap: 0.25rem; flex: 1;">
+                                <div class="ctx-detail">
                                     <div id="contextCapDetail" style="font-weight: 600; font-size: 0.9rem;">0 / 1.05M tokens</div>
                                     <div id="contextRemainingDetail" style="font-size: 0.8rem; color: var(--text-muted);">100% capacity remaining</div>
-                                    <div id="activeModelDetail" style="font-size: 0.8rem; font-weight: 600; color: var(--accent-terracotta); margin-top: 0.25rem;">Model: —</div>
+                                    <div id="activeModelDetail" style="font-size: 0.78rem; font-weight: 600; margin-top: 0.25rem; overflow-wrap: anywhere;">Model: —</div>
                                 </div>
                             </div>
                         </div>
 
                         <div class="panel">
-                            <span class="panel-title">Last Turn Details</span>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.25rem; font-size: 0.85rem;">
-                                <div style="border-right: 1px solid var(--border-color); padding-right: 0.5rem;">
-                                    <span style="color: var(--text-muted); font-size: 0.75rem; display: block;">Input / Cache</span>
-                                    <strong id="lastInputVal" style="font-size: 1.05rem;">0</strong>
-                                    <span id="lastCacheReadVal" style="color: var(--accent-green); font-size: 0.725rem; display: block; margin-top: 0.1rem;">Cache: 0</span>
+                            <span class="panel-title">Last Turn</span>
+                            <div class="lt-grid">
+                                <div class="lt-cell">
+                                    <small>Input / Cache</small>
+                                    <strong id="lastInputVal">0</strong>
+                                    <span id="lastCacheReadVal" style="color: var(--text-muted); font-size: 0.72rem; display: block; margin-top: 0.1rem;">Cache: 0</span>
                                 </div>
-                                <div style="padding-left: 0.5rem;">
-                                    <span style="color: var(--text-muted); font-size: 0.75rem; display: block;">Output Tokens</span>
-                                    <strong id="lastOutputVal" style="font-size: 1.05rem;">0</strong>
-                                    <span id="lastStateVal" class="badge idle" style="margin-top: 0.15rem;">idle</span>
+                                <div class="lt-cell">
+                                    <small>Output Tokens</small>
+                                    <strong id="lastOutputVal">0</strong>
+                                    <span id="lastStateVal" class="badge idle" style="margin-top: 0.3rem;">idle</span>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- DETAILS TAB CONTENT (LOG DETAILS) -->
-        <div id="detailsTabContent" class="tab-content-wrapper hidden">
-            <div class="panel">
-                <span class="panel-title">Granular Session Request Logs</span>
-                <div class="logs-table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Time</th>
-                                <th>Agent</th>
-                                <th>Project</th>
-                                <th>Model</th>
-                                <th>State</th>
-                                <th>Input</th>
-                                <th>Output</th>
-                                <th>Cache Read</th>
-                                <th>Cum. Input</th>
-                                <th>Cum. Output</th>
-                            </tr>
-                        </thead>
-                        <tbody id="logsTableBody">
-                            <tr>
-                                <td colspan="10" style="text-align: center; color: var(--text-muted); padding: 2rem 0;">No requests recorded yet.</td>
-                            </tr>
-                        </tbody>
-                    </table>
+            <!-- DETAILS TAB CONTENT (LOG DETAILS) -->
+            <div id="detailsTabContent" class="tab-content-wrapper hidden">
+                <div class="panel">
+                    <span class="panel-title">Session Request Logs</span>
+                    <div class="logs-table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Time</th><th>Agent</th><th>Project</th><th>Model</th><th>State</th>
+                                    <th>Input</th><th>Output</th><th>Cache Read</th><th>Cum. Input</th><th>Cum. Output</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logsTableBody">
+                                <tr><td colspan="10" style="text-align: center; color: var(--text-muted); padding: 2rem 0;">No requests recorded yet.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-        </div>
+        </main>
     </div>
 
     <script>
@@ -922,6 +510,16 @@
             return map[(source || '').toLowerCase()] || (source || 'Unknown');
         }
 
+        // Provider accent dots (same hues as the BorosBar menu bar app)
+        const PROVIDER_COLORS = {
+            claude: '#ee8c61', claudecode: '#ee8c61',
+            codex: '#40d499',
+            grok: '#c7c7d1',
+            terminal: '#61a6fa', agy: '#61a6fa', antigravity: '#61a6fa', code: '#61a6fa', sdk: '#61a6fa',
+            opencode: '#bf85fc'
+        };
+        function providerColor(key) { return PROVIDER_COLORS[(key || '').toLowerCase()] || '#a1a1aa'; }
+
         // Circular ring circumference (2 * PI * r) where r = 34
         const ringCircumference = 213.6;
 
@@ -970,51 +568,42 @@
         }
 
         // Initialize Chart
+        Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif";
         const ctx = document.getElementById('usageChart').getContext('2d');
         const usageChart = new Chart(ctx, {
-            type: 'line',
+            type: 'bar',
             data: {
                 labels: [],
                 datasets: [
-                    {
-                        label: 'Prompt Input Tokens',
-                        data: [],
-                        borderColor: '#e05a47',
-                        backgroundColor: 'rgba(224, 90, 71, 0.04)',
-                        borderWidth: 2,
-                        tension: 0.35,
-                        fill: true,
-                        pointRadius: 3,
-                        pointHoverRadius: 5
-                    },
-                    {
-                        label: 'Candidate Output Tokens',
-                        data: [],
-                        borderColor: '#10b981',
-                        backgroundColor: 'rgba(16, 185, 129, 0.02)',
-                        borderWidth: 2,
-                        tension: 0.35,
-                        fill: true,
-                        pointRadius: 3,
-                        pointHoverRadius: 5
-                    }
+                    { label: 'Prompt Input Tokens', data: [], backgroundColor: '#0a0a0a', borderRadius: 99, borderSkipped: false, maxBarThickness: 9 },
+                    { label: 'Candidate Output Tokens', data: [], backgroundColor: '#d4d4d8', borderRadius: 99, borderSkipped: false, maxBarThickness: 9 }
                 ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                categoryPercentage: 0.75,
+                barPercentage: 0.9,
                 plugins: {
                     legend: {
+                        position: 'top',
+                        align: 'end',
                         labels: {
-                            color: '#6b6b63',
-                            font: { family: 'Inter', size: 11, weight: '500' }
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            boxWidth: 7,
+                            boxHeight: 7,
+                            padding: 14,
+                            color: '#52525b',
+                            font: { size: 11, weight: '500' }
                         }
                     },
                     tooltip: {
                         mode: 'index',
                         intersect: false,
                         padding: 10,
-                        backgroundColor: 'rgba(25, 25, 25, 0.95)',
+                        cornerRadius: 14,
+                        backgroundColor: '#0a0a0a',
                         titleFont: { family: 'Inter', size: 12, weight: '600' },
                         bodyFont: { family: 'Inter', size: 11 }
                     }
@@ -1022,11 +611,13 @@
                 scales: {
                     x: {
                         grid: { display: false },
-                        ticks: { color: '#6b6b63', font: { family: 'Inter', size: 10 } }
+                        border: { display: false },
+                        ticks: { color: '#71717a', maxRotation: 0, autoSkip: true, maxTicksLimit: 8, font: { size: 10 } }
                     },
                     y: {
-                        grid: { color: 'rgba(25, 25, 25, 0.05)' },
-                        ticks: { color: '#6b6b63', font: { family: 'Inter', size: 10 } }
+                        grid: { color: '#e4e4e7', borderDash: [4, 4] },
+                        border: { display: false, dash: [4, 4] },
+                        ticks: { color: '#71717a', font: { size: 10 } }
                     }
                 }
             }
@@ -1183,7 +774,7 @@
             agentSummaryGrid.innerHTML = agentRows.length
                 ? agentRows.map(([key, summary]) => `
                     <div class="agent-summary-card">
-                        <div class="agent-summary-label">${summary.label}</div>
+                        <div class="agent-summary-label"><span class="pdot" style="--dot:${providerColor(key)}"></span>${summary.label}</div>
                         <div class="agent-summary-value">${formatInt(summary.input + summary.output)}</div>
                         <div class="agent-summary-meta">${formatInt(summary.requests)} requests · ${formatInt(summary.input)} in · ${formatInt(summary.output)} out</div>
                     </div>
@@ -1242,7 +833,7 @@
             container.innerHTML = reqs.map(evt => `
                 <div class="recent-request-row">
                     <div class="recent-request-model">
-                        <div class="recent-request-dot"></div>
+                        <div class="recent-request-dot" style="--dot:${providerColor(getSourceKey(evt))}"></div>
                         <span title="${evt.model}">${evt.model}</span>
                     </div>
                     <div class="recent-request-stats">
@@ -1450,7 +1041,7 @@
                 const source = getDisplaySource(getSourceKey(evt));
                 const prodClass = getSourceKey(evt) === 'codex' ? 'prod-ide' : 'prod-cli';
                 const prod = { name: source, class: prodClass };
-                const prodBadge = `<span class="badge ${prod.class}">${prod.name}</span>`;
+                const prodBadge = `<span class="badge ${prod.class}"><span class="pdot" style="--dot:${providerColor(getSourceKey(evt))}"></span>${prod.name}</span>`;
 
                 tr.innerHTML = `
                     <td>${timeStr}</td>
