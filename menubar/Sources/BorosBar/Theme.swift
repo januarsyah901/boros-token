@@ -17,6 +17,43 @@ enum Theme {
     }()
 }
 
+/// Per-provider palette: lighter tone = input, deeper tone = output. Aliases map to one provider.
+enum Provider: String {
+    case claude, codex, grok, antigravity, opencode, other
+
+    init(raw: String) {
+        switch raw.lowercased() {
+        case "claude", "claudecode": self = .claude
+        case "codex": self = .codex
+        case "grok": self = .grok
+        case "terminal", "agy", "antigravity", "code": self = .antigravity
+        case "opencode": self = .opencode
+        default: self = .other
+        }
+    }
+
+    var input: Color {
+        switch self {
+        case .claude:      return Color(red: 0.93, green: 0.55, blue: 0.38)  // terracotta
+        case .codex:       return Color(red: 0.25, green: 0.83, blue: 0.60)  // green
+        case .grok:        return Color(red: 0.78, green: 0.78, blue: 0.82)  // silver
+        case .antigravity: return Color(red: 0.38, green: 0.65, blue: 0.98)  // blue
+        case .opencode:    return Color(red: 0.75, green: 0.52, blue: 0.99)  // purple
+        case .other:       return Theme.input
+        }
+    }
+    var output: Color {
+        switch self {
+        case .claude:      return Color(red: 0.72, green: 0.31, blue: 0.16)
+        case .codex:       return Color(red: 0.03, green: 0.55, blue: 0.40)
+        case .grok:        return Color(red: 0.50, green: 0.50, blue: 0.56)
+        case .antigravity: return Color(red: 0.13, green: 0.35, blue: 0.85)
+        case .opencode:    return Color(red: 0.50, green: 0.20, blue: 0.80)
+        case .other:       return Theme.output
+        }
+    }
+}
+
 enum Fmt {
     /// 3 significant digits: 152k, 15.2k, 1.52k, 1.52M.
     static func k(_ v: Double) -> String {

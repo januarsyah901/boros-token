@@ -36,6 +36,7 @@ struct MeterView: View {
 
 struct SparklineView: View {
     let samples: [Sample]
+    var provider: Provider = .other
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { tl in
@@ -62,8 +63,8 @@ struct SparklineView: View {
                         y: size.height - CGFloat(f($0) / peak) * size.height)
             }
         }
-        layer(ctx, size, pts(\.outRate), Theme.output)
-        layer(ctx, size, pts(\.inRate), Theme.input)
+        layer(ctx, size, pts(\.outRate), provider.output)
+        layer(ctx, size, pts(\.inRate), provider.input)
     }
 
     private func layer(_ ctx: GraphicsContext, _ size: CGSize, _ p: [CGPoint], _ color: Color) {
@@ -91,6 +92,7 @@ struct SparklineView: View {
 struct HeaderView: View {
     static let height: CGFloat = 206
     let model: BorosModel
+    private var provider: Provider { Provider(raw: model.agentRaw) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -101,14 +103,14 @@ struct HeaderView: View {
                     Spacer(minLength: 4)
                     Text(model.agentState.uppercased())
                         .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(model.agentState == "working" ? Theme.input : .secondary)
+                        .foregroundStyle(model.agentState == "working" ? provider.input : .secondary)
                 }
                 HStack {
-                    big("arrow.up", model.hIn, Theme.input)
+                    big("arrow.up", model.hIn, provider.input)
                     Spacer()
-                    big("arrow.down", model.hOut, Theme.output)
+                    big("arrow.down", model.hOut, provider.output)
                 }
-                SparklineView(samples: model.hHistory)
+                SparklineView(samples: model.hHistory, provider: provider)
                     .frame(height: 56)
                     .clipShape(RoundedRectangle(cornerRadius: 4))
                 HStack {
@@ -158,7 +160,7 @@ struct HeaderView: View {
             GeometryReader { g in
                 ZStack(alignment: .leading) {
                     Capsule().fill(.primary.opacity(0.12))
-                    Capsule().fill(Theme.input)
+                    Capsule().fill(provider.input)
                         .frame(width: g.size.width * min(max(model.percent / 100, 0), 1))
                         .animation(.smooth(duration: 0.4), value: model.percent)
                 }
@@ -192,7 +194,10 @@ struct TodayListView: View {
                     .frame(height: 20, alignment: .leading)
             } else {
                 ForEach(model.today.prefix(Self.maxRows)) { r in
-                    HStack {
+                    HStack(spacing: 6) {
+                        let p = Provider(raw: r.agent)
+                        Circle().fill(LinearGradient(colors: [p.input, p.output], startPoint: .top, endPoint: .bottom))
+                            .frame(width: 8, height: 8)
                         Text(AgentNames.label(r.agent)).font(.system(size: 12)).lineLimit(1)
                         Spacer()
                         Text(Fmt.k(r.tokens)).font(.system(size: 11).monospacedDigit()).foregroundStyle(.secondary)
